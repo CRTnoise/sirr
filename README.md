@@ -1,12 +1,12 @@
-<p align="center"><img src="docs/media/hero.png" alt="Sirr — serverless, end-to-end encrypted rooms"></p>
+<p align="center"><img src="docs/media/hero.png" alt="Sirr - serverless, end-to-end encrypted rooms"></p>
 
 # Sirr
 
-**Serverless, end-to-end encrypted rooms for text, voice, files and screen share — carried directly between the devices of the people in them.**
+**Serverless, end-to-end encrypted rooms for text, voice, files and screen share being carried directly between the devices of the people in them.**
 
 No servers. No accounts. No phone number. Nobody in the middle who can be ordered to hand over your messages, because there is no middle.
 
-> *Sirr* (سرّ) is Arabic for a secret — the one kept between two. Read it as an acronym and it's IRC with the servers taken out: **S**erverless **I**nternet **R**elay-free **R**ooms.
+> *Sirr* (سرّ) is Arabic for a secret, a well guarded one that is kept between two. SIRR is also: **S**erverless **I**nternet **R**elay-free **R**ooms.
 
 ---
 
@@ -19,8 +19,8 @@ No servers. No accounts. No phone number. Nobody in the middle who can be ordere
 - **Files** stream peer to peer and are written to disk encrypted.
 - **Everything on disk is encrypted**: history, room codes, contacts and received files, under a key protected by the operating system keychain.
 - **Disappearing messages**, offline history sync between members, verified relays of messages you missed, room ownership and moderation, DMs and contacts.
-- **Gets through when the network fights back**: remembered entry points, volunteer blind relays, WebSocket bridges that look like ordinary HTTPS, and **Nearby** — a LAN (and experimental Bluetooth) mesh for when there is no internet at all.
-- **Echoes**: a message for someone who's offline can wait *inside the DHT itself* — no server and no member holding it — and stays alive only as long as members keep listening for it.
+- **Gets through when the network fights back**: remembered entry points, volunteer blind relays, WebSocket bridges that look like ordinary HTTPS, and **Nearby** - a LAN (and experimental Bluetooth) mesh for when there is no internet at all.
+- **Echoes**: a message for someone who's offline can wait *inside the DHT itself* - no server and no member holding it - and stays alive only as long as members keep listening for it.
 - **App lock with a duress passphrase**, panic wipe, room eviction, padded traffic, optional cover traffic.
 
 ## A look
@@ -46,20 +46,20 @@ No servers. No accounts. No phone number. Nobody in the middle who can be ordere
 
 ## Who it is for
 
-People who need to talk without asking anyone's permission: journalists and their sources, organisers, communities on networks that get watched or switched off, families split across borders. Sirr is built to have **no central point to block, subpoena or shut down** — and to say plainly what it does *not* protect against (below).
+People who need to talk without asking anyone's permission: journalists and their sources, organisers, communities on networks that get watched or switched off, families split across borders. Sirr is built to have **no central point to block, subpoena or shut down** - and to say plainly what it does *not* protect against (below).
 
-## What it protects — and what it doesn't
+## What it protects - and what it doesn't
 
 **Protected**
 
 - Message content, files and voice from everyone except the room's members.
 - Your history at rest when the device is taken powered off: the data key is sealed by the OS keychain, which opens with your login. Use full-disk encryption and a strong login password as well.
-- Your data on a seized, logged-in laptop, with the app lock on — and under coercion, with the duress passphrase.
-- Past sessions if your identity key is later stolen (forward secrecy) — and the thief still can't pose as other people to you.
+- Your data on a seized, logged-in laptop, with the app lock on - and under coercion, with the duress passphrase.
+- Past sessions if your identity key is later stolen (forward secrecy) - and the thief still can't pose as other people to you.
 - Your room list: peers learn only the rooms they share with you. Your name and status: only people who completed the handshake with you see them.
 - Who's talking, from someone watching your connection: payloads are padded, and cover traffic is one switch away.
 
-**Not protected — know this before you rely on it**
+**Not protected - know this before you rely on it**
 
 - **Your IP address is visible to the people you talk to.** Connections are direct; relays and bridges help you *reach* people, they don't hide you (no onion routing). Anyone in a room learns the IP of every member who is online.
 - **A room is only as private as its code.** Anyone with the code is a member. The owner can remove someone by moving everyone else to a new code (`/evict nick`).
@@ -142,7 +142,7 @@ An invite is `sirr://join/<code>`, optionally followed by `?via=` entry points. 
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Security issues: [SECURITY.md](SECURITY.md) — please don't open public issues for them.
+See [CONTRIBUTING.md](CONTRIBUTING.md). Security issues: [SECURITY.md](SECURITY.md) - please don't open public issues for them.
 
 ## License
 
