@@ -1,6 +1,6 @@
 {
   "name": "sirr",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "description": "Serverless, end-to-end encrypted rooms for text, voice and files, carried directly between peers.",
   "author": {
@@ -23,7 +23,7 @@
     "build:worklet": "node scripts/build-worklet.js",
     "test:mesh": "node test/mesh.mjs",
     "test:notifs": "node test/notifs.mjs",
-    "test": "node test/mesh.mjs && node test/network.cjs && node test/transfers.cjs && node test/privacy.cjs && node test/atrest.cjs && node test/storeparity.cjs && node test/hardening.cjs && node test/applock.cjs && node test/nearby.cjs",
+    "test": "node test/mesh.mjs && node test/network.cjs && node test/transfers.cjs && node test/privacy.cjs && node test/atrest.cjs && node test/storeparity.cjs && node test/hardening.cjs && node test/applock.cjs && node test/nearby.cjs && node test/sealed.cjs",
     "test:network": "node test/network.cjs",
     "test:transfers": "node test/transfers.cjs",
     "test:privacy": "node test/privacy.cjs",
@@ -32,7 +32,8 @@
     "preview": "node dev/preview.mjs",
     "test:pathways": "node test/pathways.cjs",
     "test:nearby": "node test/nearby.cjs",
-    "test:echoes": "node test/echoes.cjs"
+    "test:echoes": "node test/echoes.cjs",
+    "test:sealed": "node test/sealed.cjs"
   },
   "dependencies": {
     "@hyperswarm/dht-relay": "0.4.3",

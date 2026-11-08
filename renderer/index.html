@@ -9,6 +9,13 @@
 <body>
   <input type="file" id="file-pick" style="display:none">
 
+  <!-- Shown for the whole session when the saved identity couldn't be
+       unlocked and a temporary one is in use. Not dismissable. -->
+  <div id="temp-id-banner" class="temp-id-banner hidden" role="alert">
+    <b>TEMPORARY IDENTITY</b>
+    <span>Your saved identity could not be unlocked (OS keyring unavailable). You are using a temporary identity with a different fingerprint: contacts will not recognise you, and nothing from this session carries over. Unlock your login keyring (or install gnome-keyring / KWallet), then restart Sirr. Your saved identity is untouched.</span>
+  </div>
+
   <!-- JOIN -->
   <div id="join-screen" class="screen active">
     <div class="join-page">
@@ -379,6 +386,17 @@
       </div>
       <div class="invite-sub">Pick a room to invite them to:</div>
       <div id="invite-rooms" class="invite-rooms"></div>
+    </div>
+  </div>
+
+  <!-- JOIN FROM A LINK — a sirr:// link never joins on its own -->
+  <div id="link-join-ov" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="link-join-title">
+    <div class="ov-bg"></div>
+    <div class="ov-panel ov-sm">
+      <div class="ov-top"><span class="ov-title" id="link-join-title">Join from a link?</span><button id="btn-close-linkjoin" class="ibtn" aria-label="Cancel">&#x2715;</button></div>
+      <div class="link-join-sub">A link asked Sirr to join this room. Joining announces you to its members and lets them connect to you directly. Only continue if you expected this invite.</div>
+      <div class="link-join-code" id="link-join-code"></div>
+      <div class="link-join-btns"><button id="btn-linkjoin-no" class="btn2">CANCEL</button><button id="btn-linkjoin-yes" class="btn1">JOIN ROOM</button></div>
     </div>
   </div>
 

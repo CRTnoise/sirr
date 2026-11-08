@@ -14,7 +14,7 @@ No servers. No accounts. No phone number. Nobody in the middle who can be ordere
 
 - **Rooms** are rendezvous points on the [Hyperswarm](https://github.com/holepunchto/hyperswarm) DHT. Everyone holding a room's code connects directly to everyone else in it.
 - **Identity** is an X25519 key pair generated on your device. Your fingerprint is derived from its public half; there is nothing to register.
-- **Every message is end-to-end encrypted** on top of Hyperswarm's Noise-encrypted links, under per-connection session keys that are forward-secret.
+- **Everything is end-to-end encrypted** — messages, voice, files, names, pins, typing — on top of Hyperswarm's Noise-encrypted links, never trusting the link itself: a fresh key for every message (hash ratchet), a new key exchange every ten minutes, forward-secret from the first byte.
 - **Voice, video and screen share** run peer to peer (WebRTC, or audio over the swarm link itself when WebRTC can't connect).
 - **Files** stream peer to peer and are written to disk encrypted.
 - **Everything on disk is encrypted**: history, room codes, contacts and received files, under a key protected by the operating system keychain.
@@ -133,7 +133,7 @@ test/                node test suites and the voice harness
 Nobody runs infrastructure for Sirr, and nothing here costs money:
 
 - **Volunteer relays.** Anyone can tick *Help others connect*. Their app then relays encrypted streams for up to 24 people who can't reach each other directly, under a new key each launch, found through a DHT topic that rotates daily. Relays see ciphertext and IPs, never content or rooms. The pool is as big as the number of people willing to share some bandwidth.
-- **Bridges.** For networks that block or throttle peer-to-peer traffic: `node bin/sirr-bridge.js --port 49443` on any reachable machine (a free-tier VM, a home server with a forwarded port), behind a TLS reverse proxy on :443. To a filter it's an ordinary HTTPS site with a WebSocket. Pass the `wss://` address by hand, or let invites carry it.
+- **Bridges.** For networks that block or throttle peer-to-peer traffic: `node bin/sirr-bridge.js --port 49443` on any reachable machine (a free-tier VM, a home server with a forwarded port), behind a TLS reverse proxy on :443. To a filter it's an ordinary HTTPS site with a WebSocket. Pass the `wss://` address by hand, or let invites carry it. A bridge sees your IP, the handshake (including your identity's public key) and the size and timing of what you send — never the content, names or voice, and it can't inject anything.
 - **Entry points.** Every Sirr remembers DHT nodes it has seen; invites carry a couple. If the three default bootstrap nodes are blocked, any one reachable node is enough.
 
 ## Invite links

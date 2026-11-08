@@ -69,14 +69,23 @@ jobs:
           cp LICENSE out/LICENSE.txt
           cp THIRD-PARTY-NOTICES.md out/
           cd out && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
+      - name: Release notes (from CHANGELOG.md)
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          awk -v v="$v" 'index($0, "## " v) == 1 { p = 1; next } /^## / && p { exit } p' CHANGELOG.md > notes.md
+          cat >> notes.md <<'EOF'
+
+          ---
+          **Windows:** `Sirr-Setup-*.exe` installs Sirr; `Sirr-*-portable.exe` runs without installing.
+          **Linux:** `Sirr-*-x86_64.AppImage` (chmod +x, run) or `Sirr-*-amd64.deb` (`sudo apt install ./Sirr-*-amd64.deb`).
+          Builds are not code-signed yet. Check the file against `SHA256SUMS.txt` before running it:
+          `sha256sum -c SHA256SUMS.txt --ignore-missing` (Linux) · `certutil -hashfile <file> SHA256` (Windows).
+          EOF
+          cat notes.md
       - uses: softprops/action-gh-release@v2
         with:
           name: Sirr ${{ github.ref_name }}
           draft: false
           generate_release_notes: true
-          body: |
-            **Windows:** `Sirr-Setup-*.exe` installs Sirr; `Sirr-*-portable.exe` runs without installing.
-            **Linux:** `Sirr-*-x86_64.AppImage` (chmod +x, run) or `Sirr-*-amd64.deb` (`sudo apt install ./Sirr-*-amd64.deb`).
-            Builds are not code-signed yet. Check the file against `SHA256SUMS.txt` before running it:
-            `sha256sum -c SHA256SUMS.txt --ignore-missing` (Linux) · `certutil -hashfile <file> SHA256` (Windows).
+          body_path: notes.md
           files: out/*

@@ -417,6 +417,10 @@ import * as rooms from './rooms.js';
     if (!m) return;
     m.content = i.content;
     m.editedAt = i.editedAt || Date.now();
+    if ('sigOk' in i && !m.self) {
+      m.sigOk = i.sigOk === true;
+      if (!m.sigOk) m.verified = undefined;
+    }
     // Patch the live DOM if the bubble is rendered.
     if (i.room === state.state.activeRoom && (i.channel || 'default') === state.state.activeTextChannel) {
       const bubble = document.querySelector('#messages .tx[data-msgid="' + CSS.escape(i.msgId) + '"]');
@@ -424,6 +428,7 @@ import * as rooms from './rooms.js';
         const txtEl = bubble.querySelector('.txt');
         if (txtEl) txtEl.innerHTML = fmtTxt(m.content || '');
         setEditedMarker(bubble, m.editedAt);
+        if (!m.self && !m.sigOk && !m.verified) bubble.querySelector('.hdr .verify')?.remove();
       }
     }
   }
@@ -953,8 +958,11 @@ import * as rooms from './rooms.js';
           ? '<span class="fp' + (msg.verified ? '' : ' relayed') + '" title="Left in the DHT while you were away and found there (Echoes). ' + (msg.verified ? 'Signature checked against this member\'s room key.' : 'You haven\'t met this author directly yet, so the name can\'t be checked.') + '">◌ echo' + (msg.verified ? ' · verified' : ' · unverified') + '</span>'
           : (msg.verified && !msg.self ? '<span class="fp" title="Relayed while you were offline — signature checked against this member\'s room key.">↻ verified</span>' : '')
           + (msg.relayedBy ? '<span class="fp relayed" title="Delivered by ' + _esc(msg.relayedBy.nickname || 'another peer') + ' while you were offline. You haven\'t met this author directly yet, so their room key is unknown and the name above can\'t be checked.">↻ relayed · unverified</span>' : ''))
-      // Relayed-and-unverified messages must not claim a good signature.
-      + (msg.relayedBy && !msg.verified ? '' : '<span class="verify">sig <b>ok</b></span>')
+      // "sig ok" only for a signature that was actually checked: our own,
+      // a live message verified on arrival (sigOk), or a relayed / echoed
+      // one verified against the author's room key (verified).
+      + (msg.self || msg.sigOk === true || msg.verified === true
+          ? '<span class="verify" title="Signature checked against this member\'s room key.">sig <b>ok</b></span>' : '')
       + '</div>'
       : '';
 

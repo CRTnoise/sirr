@@ -114,7 +114,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   A.nickname = 'alice-private'; A.statusText = 'at the clinic';
   const sx = mkSock();
   A._onConn(sx, { publicKey: crypto.randomBytes(32), topics: [] });
-  sendLine(sx, { type: 0x01, kxVersion: 3, ephPub: Buffer.from(require('tweetnacl').box.keyPair().publicKey).toString('base64'), publicKey: Buffer.from(require('tweetnacl').box.keyPair().publicKey).toString('base64') });
+  sendLine(sx, { type: 0x01, kxVersion: 4, ephPub: Buffer.from(require('tweetnacl').box.keyPair().publicKey).toString('base64'), publicKey: Buffer.from(require('tweetnacl').box.keyPair().publicKey).toString('base64') });
   await wait(20);
   ok(sx.out.length >= 2 && !sx.out.join('').includes('alice-private') && !sx.out.join('').includes('clinic'), 'no nickname or status leaves before the session (KEY_EXCHANGE, ANNOUNCE)');
 
@@ -129,7 +129,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   const s2 = mkSock();
   A._onConn(s2, { publicKey: crypto.randomBytes(32), topics: [] });
   const fakeEph = require('tweetnacl').box.keyPair();
-  sendLine(s2, { type: 0x01, kxVersion: 3, ephPub: Buffer.from(fakeEph.publicKey).toString('base64'), publicKey: victim.getPublicKeyB64(), nickname: 'victim' });
+  sendLine(s2, { type: 0x01, kxVersion: 4, ephPub: Buffer.from(fakeEph.publicKey).toString('base64'), publicKey: victim.getPublicKeyB64(), nickname: 'victim' });
   await wait(30);
   ok(!events.includes('peer-joined'), 'claimed identity is not announced before KEY_CONFIRM');
   sendLine(s2, { type: 0x05, tag: crypto.randomBytes(32).toString('base64') });
@@ -157,7 +157,11 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
     const r1 = run(Al, Bo);
     ok(r1.okA && r1.okB, 'honest handshake confirms on both sides');
     ok(Al.decrypt(Bo.encrypt('hi', 'a'), 'b') === 'hi', 'both sides derive the same session key');
-    ok(Al.sessionMac('b', 'l').equals(Bo.sessionMac('a', 'l')), 'session MACs agree');
+    const salt = crypto.randomBytes(32).toString('base64');
+    ok(Al.boltKey('b', 'l', salt).equals(Bo.boltKey('a', 'l', salt)), 'transfer keys agree');
+    ok(!Al.boltKey('b', 'l', salt).equals(Al.boltKey('b', 'l', crypto.randomBytes(32).toString('base64'))), 'transfer keys depend on the per-offer salt');
+    let noSalt = false; try { Al.boltKey('b', 'l', ''); } catch (e) { noSalt = true; }
+    ok(noSalt, 'no transfer key without a salt');
     Al.removeSession('b'); Bo.removeSession('a');
     const r2 = run(Al, Bo, 'x|y', 'x|z');
     ok(!r2.okA && !r2.okB, 'a session cannot be spliced onto another connection (binding)');
@@ -245,6 +249,55 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
     for (let i = 0; i < 4000; i++) { const k = key('user' + i); if (seen.has(k)) coll++; seen.add(k); }
     ok(coll === 0, 'no two of 4000 sequential names share an inside (' + coll + ')');
     ok(g.sigilSvg('nadia', '8F3A 21C9 7E04 B6D2') !== g.sigilSvg('nadia', '1C77 E0A4 93BF 5D20'), 'same name, different key → different sigil');
+  }
+
+  sec('1.2 — fail closed, honest identity, bounded edits, voice gate');
+  {
+    const S = require('../lib/storage.js');
+    const own = crypto.randomBytes(32).toString('hex'), other = crypto.randomBytes(32).toString('hex');
+    const st = new S(fs.mkdtempSync(path.join(os.tmpdir(), 'hd-s')));
+    st.setSelfIdentity('ME', other);
+    const legacy = 'PH-LEGACY-ROOM'; st.addRoom(legacy);
+    ok(!st.hasPerm(legacy, 'ME', 'deleteChannel', other) && !st.canModerate(legacy, 'ME', other), 'room without an owner commitment: no perms, no moderation');
+    const gp = st.getPerms(legacy, 'ME');
+    ok(gp.unowned === true && !gp.isOwner && !Object.entries(gp).some(([k, v]) => k !== 'unowned' && v === true), 'UI perms match (none, flagged unowned)');
+    const sr = R.generate(own); st.addRoom(sr);
+    const gp2 = st.getPerms(sr, 'ME');
+    ok(!gp2.isOwner && !Object.entries(gp2).some(([, v]) => v === true), 'SR room before its charter: a non-owner is offered nothing');
+    st.setSelfIdentity('OWNER', own);
+    ok(st.getPerms(sr, 'OWNER').isOwner === true, 'the committed owner sees owner controls before the charter');
+    st.appendMessage(sr, 'default', { msgId: 'm1', content: 'hi', type: 'text', fingerprint: 'AUTH', nickname: 'a', timestamp: 1 });
+    ok(st.editMessage(sr, 'default', 'm1', 'x'.repeat(8001), 'AUTH').ok === false, 'oversized edit refused at the store');
+    ok(st.editMessage(sr, 'default', 'm1', 'fine', 'AUTH').ok === true, 'normal edit still works');
+    st.messages.close();
+
+    // A keystore-encrypted identity with the keystore gone: temporary,
+    // flagged, and the saved file is left exactly as it was.
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hd-id'));
+    const box = { up: true, isAvailable() { return this.up; }, encrypt: (x) => 'E' + Buffer.from(x).toString('base64'), decrypt: (x) => Buffer.from(x.slice(1), 'base64').toString() };
+    const c1 = new Crypto(dir, box); await c1.init();
+    const saved = fs.readFileSync(path.join(dir, 'identity.json'), 'utf8');
+    box.up = false;
+    const c2 = new Crypto(dir, box);
+    const origErr = console.error; console.error = () => {};
+    await c2.init(); console.error = origErr;
+    ok(c2.temporaryIdentity === true && c2.getFingerprint() !== c1.getFingerprint(), 'keyring gone → temporary identity, flagged');
+    ok(fs.readFileSync(path.join(dir, 'identity.json'), 'utf8') === saved, 'saved identity file untouched');
+    box.up = true;
+    const c3 = new Crypto(dir, box); await c3.init();
+    ok(!c3.temporaryIdentity && c3.getFingerprint() === c1.getFingerprint(), 'keyring back → the real identity again');
+
+    // Voice is only sent on an established session.
+    const s3 = mkSock();
+    A._onConn(s3, { publicKey: crypto.randomBytes(32), topics: [] });
+    const k = require('tweetnacl').box.keyPair();
+    const pid3 = [...A.peers.keys()].find(p => A.peers.get(p).socket === s3);
+    sendLine(s3, { type: 0x01, kxVersion: 4, ephPub: Buffer.from(require('tweetnacl').box.keyPair().publicKey).toString('base64'), publicKey: Buffer.from(k.publicKey).toString('base64') });
+    await wait(20);
+    const p3 = A.peers.get(pid3);
+    if (p3) p3.rooms.add(c);
+    ok(p3 && p3.keyExchanged && !A.crypto.hasSession(pid3), '(setup) key exchanged, no session yet');
+    ok(A.sendVoiceMedia(pid3, Buffer.alloc(100), c) === false, 'no voice before the session');
   }
 
   await A.destroy?.();

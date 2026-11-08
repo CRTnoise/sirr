@@ -36,7 +36,7 @@ for `e-1`, `e`, `e+1`. There is no static topic. A DHT observer without the code
 
 ## 3. Links and the handshake — `lib/network.js`, `lib/crypto-layer.js`
 
-Hyperswarm gives each pair of peers a Noise-encrypted stream (with a random per-launch swarm key, unlinkable across launches). On top of it, handshake **kx v3**:
+Hyperswarm gives each pair of peers a Noise-encrypted stream (with a random per-launch swarm key, unlinkable across launches). That stream is **not trusted with content**: with a bridge in the path (§10) it ends at the bridge. On top of it, handshake **kx v3** (wire protocol 4):
 
 1. Each side sends `KEY_EXCHANGE`: its identity public key `s`, a fresh **ephemeral** X25519 key `e` for this connection, capabilities, room-membership tags (§4) and the current minute (clock check, §10). No nickname, avatar or status.
 2. With `L`/`H` the two parties ordered by identity key, each computes
@@ -48,18 +48,38 @@ Hyperswarm gives each pair of peers a Noise-encrypted stream (with a random per-
    ```
 
    where `binding` is the sorted pair of swarm keys of this socket. It burns its ephemeral secret and sends `KEY_CONFIRM` with `HMAC(K, "confirm|" own identity)`.
-3. On a valid confirm the session key is `HMAC(K, "session")`.
+3. On a valid confirm both sides derive the session state from `K` (below) and wipe `K`.
 
 Properties: `DH(eL,eH)` gives **forward secrecy**; the two mixed terms authenticate both identities; no term combines the two static keys, so a stolen identity key does **not** let the thief impersonate others to its owner (no key-compromise impersonation); the binding stops a session being spliced onto another connection.
 
 Rules enforced by the receiver:
 
-- A `KEY_EXCHANGE` below v3 or without an ephemeral key is refused and the connection dropped — there is nothing to downgrade to.
-- Until `KEY_CONFIRM` succeeds, only `KEY_EXCHANGE`, `KEY_CONFIRM`, `PING`, `PONG` and `LEAVE` are processed.
+- A `KEY_EXCHANGE` below protocol 4 or without an ephemeral key is refused and the connection dropped — there is nothing to downgrade to.
+- Until `KEY_CONFIRM` succeeds, only `KEY_EXCHANGE`, `KEY_CONFIRM`, `PING`, `PONG` and `LEAVE` are processed. Anything the client wants to send before then is held (at most 64 frames) and sent sealed once the session exists.
+- After it, **only** `KEY_EXCHANGE`/`KEY_CONFIRM` (ignored as duplicates) and `SEALED` records are accepted in the clear. Every other frame type arriving unsealed is dropped.
 - The profile (nickname, avatar, drawn sigil, status) travels only in `PROFILE`, encrypted under the session. The peer reaches the UI and rosters once its `PROFILE` is in (or 2 s after confirmation).
 - Blocked fingerprints are dropped at `KEY_EXCHANGE`.
 
-Content messages (chat, profile, sync bundles, edits, file control, room keys, moves) are encrypted with the session key: XSalsa20-Poly1305, 24-byte random nonce per message. Every plaintext is padded (ISO/IEC 7816-4) to 256 B, 1 KiB, 4 KiB, 16 KiB, then 16 KiB steps.
+### Sealed records
+
+Every frame after the handshake — chat, voice media and signaling, pins, room and channel names, typing, admin and charter, membership updates, sync, files, profile, keepalive — is serialised and sent as `{type: SEALED, d}` with
+
+```
+d = base64( epoch:u32be ‖ n:u32be ‖ XSalsa20-Poly1305(mk, nonce, pad(frame)) )
+```
+
+Each direction has its own chain, named by the sender's ephemeral key (unique per connection):
+
+```
+ck₀(send) = HMAC(K, "sirr/chain/1|" ‖ e_mine)      ck₀(recv) = HMAC(K, "sirr/chain/1|" ‖ e_theirs)
+mk = HMAC(ck, "mk")   nonce = HMAC(ck, "nonce")[0..24]   ck' = HMAC(ck, "ck")
+```
+
+`ck` is wiped as soon as `ck'` exists, so keys copied from memory later open nothing already sent or received. The receiver accepts `n` only at or ahead of its counter (a lost record is stepped over, at most 2048 at once, without keeping skipped keys), commits the chain only after the MAC checks, and **ends the session** on a replayed, reordered, rewritten or forged record (the swarm reconnects with a fresh handshake). Frames are padded (ISO/IEC 7816-4) to 256 B, 1 KiB, 4 KiB, 16 KiB, then 16 KiB steps.
+
+**Rekey.** One side (the one with the lower ephemeral key) starts an X25519 exchange inside the session every 10 minutes or 5000 records: `REKEY{op:"start", e}`; the other answers `REKEY{op:"ack", e'}` under its old chain and then switches. Each side's send chain absorbs `dh = X25519(e, e')` the moment it switches (`ck = HMAC(ck, "sirr/rk/1|" ‖ dh)`, `epoch += 1`, `n = 0`), and the receiver applies the same `dh` to its receive chain at the first record of the new epoch. A party who copied the chain keys but is not on the wire is locked out from the next epoch on (post-compromise recovery).
+
+**File transfers (BOLT).** Each offer carries 32 random bytes `k` inside its sealed record; the transfer key is `HMAC(HMAC(HMAC(K, "sirr/bolt/1"), "salt|" ‖ k), label)`. BOLT frames are binary and their headers (stream id, offsets) are visible to the transport; the payload is AEAD-sealed under the transfer key.
 
 ## 4. Membership without disclosure
 
@@ -79,7 +99,9 @@ Members who were offline get missed history from whoever is online (offline sync
 - messages and edits are signed with that room key;
 - the binding "room key K belongs to fingerprint F" is only ever sent peer to peer inside an authenticated session (`ROOM_KEYS`), never signed — a leaked transcript proves nothing about who K is.
 
-A relayed message is shown as verified, forged or unverified accordingly.
+A relayed message is shown as verified, forged or unverified accordingly. Live messages and edits are checked too, against the room key the author gave us: the UI shows **sig ok** only for a signature that verified (or for our own messages) — never for a message whose signature failed or couldn't be checked.
+
+**Permissions.** Room rights are decided by the owner commitment in the code. A room whose code commits to no owner (anything but an `SR-` code or a DM) has no provable owner, so nobody holds rights in it — checks fail closed.
 
 ## 5b. Room moves: rekey and eviction — `lib/roommove.js`
 
@@ -126,7 +148,7 @@ When a member is offline, message `k` of the day (split into ≤ 8 parts of 480 
 
 - **Entry points**: user-supplied DHT nodes first, then up to 64 remembered from earlier sessions (sealed in the config; a random 24 tried), then the three defaults. Invite links may carry `via=` entry points (`?via=` on `sirr://`, `&via=` in the fragment of gateway links).
 - **Volunteer relays**: a volunteer runs a `blind-relay` server under a new key each launch, announced on `SHA-256("sirr/relays/1|" ‖ day)`. Clients relay through a random volunteer when a direct connection fails (`auto`) or always. At most 24 sessions per volunteer.
-- **Bridges**: the whole DHT over one WebSocket (`@hyperswarm/dht-relay`), served by `bin/sirr-bridge.js` or the app. The bridge holds the per-launch swarm key; everything inside is §3–§4.
+- **Bridges**: the whole DHT over one WebSocket (`@hyperswarm/dht-relay`), served by `bin/sirr-bridge.js` or the app. The bridge holds the per-launch swarm key, so the Noise transport ends at the bridge; it sees the handshake (§3) and the size and timing of sealed records, and nothing inside them.
 - **Clock check**: peers tell each other the minute in `KEY_EXCHANGE`; a median skew ≥ 30 min raises a warning (rendezvous topics change hourly).
 - **Nearby**: carriers (LAN: UDP announce `magic(day) ‖ node key ‖ tcp port` to 239.255.42.99:47999 and broadcast, then TCP; Bluetooth LE: GATT RX/TX, experimental) provide links. Over links, a mesh floods beacons `{origin, nonce, tags, hops ≤ 4}` with `tag = HMAC(rendezvous topic(room, hour), "sirr/near/1|" ‖ nonce)[0..128 bits]`, padded to a multiple of 4. A member who recognises a tag (lower node key dials) opens a circuit along the reverse path; relays forward frames blindly; the circuit carries a Noise secret-stream between the endpoints, and §3 runs inside it.
 

@@ -5071,3 +5071,26 @@ textarea.tin { resize: vertical; min-height: 44px; width: 100%; }
 #btn-path-restart.act { color: var(--accent); border-color: var(--accent); opacity: 1; }
 .fld textarea { height: auto; padding: 8px 12px; line-height: 1.5; }
 #btn-nolog::before { content: none; }
+
+/* ─── Temporary identity banner (crypto-layer fallback) ───────────── */
+.temp-id-banner {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 2000;
+  display: flex; gap: 12px; align-items: baseline;
+  padding: 8px 16px;
+  background: color-mix(in oklch, var(--warn) 14%, var(--bg-void));
+  border-bottom: 1px solid color-mix(in oklch, var(--warn) 55%, transparent);
+  color: var(--txt-hi); font-size: 12.5px; line-height: 1.45;
+}
+.temp-id-banner b { font-family: var(--mono); font-size: 11.5px; letter-spacing: 2px; color: var(--warn); white-space: nowrap; }
+body.has-temp-id { --vh100: calc(100vh / var(--ui-zoom, 1) - var(--temp-id-h, 0px)); }
+body.has-temp-id .screen { margin-top: var(--temp-id-h, 0px); }
+
+/* ─── Join-from-link confirmation ─────────────────────────────────── */
+.link-join-sub { color: var(--txt-muted); font-size: 13px; line-height: 1.5; margin-bottom: 14px; }
+.link-join-code {
+  font-family: var(--mono); font-size: 12.5px; letter-spacing: 1px; color: var(--txt-bright);
+  padding: 10px 12px; border: 1px solid var(--brd-soft); background: var(--bg-sunken);
+  word-break: break-all; margin-bottom: 16px;
+}
+.link-join-btns { display: flex; gap: 10px; }
+.link-join-btns > button { flex: 1; }

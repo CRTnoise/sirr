@@ -16,12 +16,14 @@ What stands between Sirr and people who depend on it, in order. Items marked **[
 | Status | Feature | Why |
 | --- | --- | --- |
 | **Next** | **Safety numbers** — 128-bit, shown as words and a QR to scan in person; warn when a contact's key changes | The 64-bit fingerprint is the only human check today |
+| Next | Identity hidden from bridges — a three-message handshake that sends the identity key only under the ephemeral DH | A bridge can still tell the same identity key is back |
+| Done | Every frame sealed after the handshake; per-message hash ratchet with counters; in-session DH rekey every 10 min (1.2.0) | Bridges saw voice, pins, names; one key per connection |
 | Done | App lock (passphrase-wrapped data key and identity, lock on sleep / idle) | A seized, logged-in laptop opens to a lock screen |
 | Done | Duress passphrase and panic wipe (crypto-shredding, global shortcut) | Border crossings, raids |
 | Done | Handshake without key-compromise impersonation (kx v3, triple DH, transcript- and channel-bound) | A stolen identity key no longer lets the thief pose as others to you |
 | Done | Room rekey and eviction (`/rekey`, `/evict`) | Membership is the code; now it can change |
 | Done | Padding of every session payload; opt-in cover traffic and send jitter | Sizes and timing reveal who talks to whom |
-| Done | Profile only inside the session | Inbox probers and bridges learned names and statuses |
+| Done | Profile only inside the session | Inbox probers learned names and statuses |
 | Done | "No history on this device" rooms; per-room disappearing timer | Less to seize |
 | Done | Clock-skew warning | Hourly rendezvous fails silently with a wrong clock |
 | Done | Hide window from screen capture (opt-in) | Screenshot malware, accidental screen shares |

@@ -885,6 +885,7 @@ function registerIPC() {
     publicKey: sirrCrypto.getPublicKeyB64(),
     peerId: sirrNetwork.myId,
     dataDir: sirrStorage.getDataDir(),
+    temporary: !!sirrCrypto.temporaryIdentity,
   }));
 
   handle('get-config', () => sirrStorage.getConfig());

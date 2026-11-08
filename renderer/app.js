@@ -1459,7 +1459,28 @@ function wireNetwork() {
     if (state.state.activeRoom === i.room) rooms.renderChannels();
   });
 
-  // Deep link
+  // Deep link. A sirr:// link comes from outside the app (a browser, a
+  // chat, a redirect), so it never joins by itself: joining announces you
+  // to the room's members and lets them connect to you directly. Codes the
+  // user types or pastes in the app still join at once.
+  const confirmLinkJoin = (code) => new Promise((resolve) => {
+    const ov = $('#link-join-ov');
+    if (!ov) return resolve(false);
+    $('#link-join-code').textContent = code;
+    ov.classList.remove('hidden');
+    const done = (yes) => {
+      ov.classList.add('hidden');
+      for (const [el, fn] of hs) el && el.removeEventListener('click', fn);
+      document.removeEventListener('keydown', onKey, true);
+      resolve(yes);
+    };
+    const onKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); done(false); } };
+    const hs = [[$('#btn-linkjoin-yes'), () => done(true)], [$('#btn-linkjoin-no'), () => done(false)],
+                [$('#btn-close-linkjoin'), () => done(false)], [$('#link-join-ov .ov-bg'), () => done(false)]];
+    for (const [el, fn] of hs) el && el.addEventListener('click', fn);
+    document.addEventListener('keydown', onKey, true);
+    setTimeout(() => $('#btn-linkjoin-no')?.focus(), 0);
+  });
   window.sirr.onDeepLinkJoin(async (d) => {
     if (!d || !d.code) return;
     const v = await validateCodeLocal(d.code);
@@ -1472,6 +1493,8 @@ function wireNetwork() {
       rooms.switchRoom(code);
       return;
     }
+    if (!(await confirmLinkJoin(code))) return;
+    if (state.roomData.has(code)) { rooms.switchRoom(code); return; }
     if ($('#chat-screen') && !$('#chat-screen').classList.contains('active')) {
       firstJoin(code);
     } else {
@@ -1613,6 +1636,15 @@ async function boot() {
 
     const identity = await window.sirr.getIdentity();
     const config   = await window.sirr.getConfig();
+    if (identity.temporary) {
+      const b = $('#temp-id-banner');
+      if (b) {
+        b.classList.remove('hidden');
+        document.body.classList.add('has-temp-id');
+        const fit = () => document.body.style.setProperty('--temp-id-h', b.offsetHeight + 'px');
+        fit(); window.addEventListener('resize', fit);
+      }
+    }
     const s = state.state;
 
     s.myNickname    = config.nickname || identity.nickname;
