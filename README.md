@@ -1,4 +1,24 @@
-<p align="center"><img src="docs/media/hero.png" alt="Sirr - serverless, end-to-end encrypted rooms"></p>
+<p align="center"><img src="docs/media/hero.png" alt="Sirr: a token broken in two. A secret kept between two people, sealed on one device and opened only on the other"></p>
+
+<p align="center">
+  <a href="https://github.com/CRTnoise/sirr/releases/latest"><img src="https://img.shields.io/github/v/release/CRTnoise/sirr?style=flat-square&label=latest&labelColor=0b0d10&color=2fbf7a" alt="Latest release"></a>
+  <a href="https://github.com/CRTnoise/sirr/releases"><img src="https://img.shields.io/github/downloads/CRTnoise/sirr/total?style=flat-square&label=total%20downloads&labelColor=0b0d10&color=2fbf7a" alt="Total downloads"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-3a3f48?style=flat-square&labelColor=0b0d10" alt="AGPL-3.0"></a>
+</p>
+
+<!-- Download links name this release's files: on a new release, replace 1.2.0 below with the new version. -->
+<table align="center">
+<tr>
+<td align="center"><a href="https://github.com/CRTnoise/sirr/releases/latest/download/Sirr-Setup-1.2.0.exe"><img src="docs/media/dl-win-setup.png" width="250" alt="Download Sirr for Windows (installer)"></a><br><img src="https://img.shields.io/github/downloads/CRTnoise/sirr/latest/Sirr-Setup-1.2.0.exe?style=flat-square&label=downloads&labelColor=0b0d10&color=2fbf7a" alt="Downloads of Sirr-Setup-1.2.0.exe"></td>
+<td align="center"><a href="https://github.com/CRTnoise/sirr/releases/latest/download/Sirr-1.2.0-portable.exe"><img src="docs/media/dl-win-portable.png" width="250" alt="Download Sirr for Windows (portable)"></a><br><img src="https://img.shields.io/github/downloads/CRTnoise/sirr/latest/Sirr-1.2.0-portable.exe?style=flat-square&label=downloads&labelColor=0b0d10&color=2fbf7a" alt="Downloads of Sirr-1.2.0-portable.exe"></td>
+</tr>
+<tr>
+<td align="center"><a href="https://github.com/CRTnoise/sirr/releases/latest/download/Sirr-1.2.0-x86_64.AppImage"><img src="docs/media/dl-linux-appimage.png" width="250" alt="Download Sirr for Linux (AppImage)"></a><br><img src="https://img.shields.io/github/downloads/CRTnoise/sirr/latest/Sirr-1.2.0-x86_64.AppImage?style=flat-square&label=downloads&labelColor=0b0d10&color=2fbf7a" alt="Downloads of Sirr-1.2.0-x86_64.AppImage"></td>
+<td align="center"><a href="https://github.com/CRTnoise/sirr/releases/latest/download/Sirr-1.2.0-amd64.deb"><img src="docs/media/dl-linux-deb.png" width="250" alt="Download Sirr for Debian and Ubuntu (.deb)"></a><br><img src="https://img.shields.io/github/downloads/CRTnoise/sirr/latest/Sirr-1.2.0-amd64.deb?style=flat-square&label=downloads&labelColor=0b0d10&color=2fbf7a" alt="Downloads of Sirr-1.2.0-amd64.deb"></td>
+</tr>
+</table>
+
+<p align="center"><sub>Free, no account. Builds aren't code-signed yet: check the file against <code>SHA256SUMS.txt</code> on the <a href="https://github.com/CRTnoise/sirr/releases/latest">release page</a> · older versions under <a href="https://github.com/CRTnoise/sirr/releases">Releases</a> · or <a href="#from-source">build from source</a>.</sub></p>
 
 # Sirr
 
@@ -72,7 +92,14 @@ The full threat model, the protocol and the list of known limitations are in [SE
 
 ## Install
 
-CI builds installers for every tagged version, with a `SHA256SUMS.txt`. Builds are not code-signed yet: verify the checksum before running.
+Download from the buttons at the top, or any version from [Releases](https://github.com/CRTnoise/sirr/releases): a Windows installer and portable `.exe`, a Linux AppImage and a `.deb`, each with `SHA256SUMS.txt`. Builds are not code-signed yet, so verify the checksum before running:
+
+```sh
+sha256sum -c SHA256SUMS.txt --ignore-missing     # Linux
+certutil -hashfile Sirr-Setup-1.2.0.exe SHA256    # Windows: compare with SHA256SUMS.txt
+```
+
+On Linux: `chmod +x Sirr-*.AppImage` and run it, or `sudo apt install ./Sirr-*-amd64.deb`.
 
 ### From source
 
