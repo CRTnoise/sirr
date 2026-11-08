@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><title>Sirr</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' blob: 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' stun: stuns:; font-src 'self'; object-src 'none'; base-uri 'none'">
+  <link rel="stylesheet" href="../assets/fonts/geist.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <input type="file" id="file-pick" style="display:none">
+
+  <!-- JOIN -->
+  <div id="join-screen" class="screen active">
+    <div class="join-page">
+      <!-- TOP LEDGER -->
+      <div class="j-top">
+        <div class="l" id="ver-ledger">SIRR &middot; v—</div>
+        <div class="c">CRYPTOGRAPHIC INSTRUMENT</div>
+        <div class="r">
+          <span id="j-date">&mdash;&mdash;&mdash;&mdash;</span>
+          <span class="live" id="j-live">LIVE</span>
+        </div>
+      </div>
+
+      <!-- CENTER BODY -->
+      <div class="j-body">
+        <main class="j-main">
+
+          <div class="j-brand">
+            <div class="j-kicker">// <b>s</b>erverless <b>i</b>nternet <b>r</b>elay-free <b>r</b>ooms</div>
+            <h1 class="wm">
+              <svg class="mark-token" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.6 3.4A8.6 8.6 0 0 0 10.6 20.6Z"/><path d="M13.4 3.4A8.6 8.6 0 0 1 13.4 20.6"/><path class="seam" d="M13.4 3.4V20.6"/></svg>
+              SIRR
+              <span class="v" id="ver-brand">v—</span>
+            </h1>
+            <p class="j-descr">Rooms for text, voice, files and screen share, carried directly between devices. No servers, no accounts, nobody in the middle to ask for your messages.</p>
+          </div>
+
+          <div class="j-form">
+            <div class="j-field" id="j-field-nick">
+              <label for="in-nick">Handle</label>
+              <input type="text" id="in-nick" placeholder="choose a name" maxlength="20" spellcheck="false" autocomplete="off">
+            </div>
+            <div class="j-field" id="j-field-code">
+              <label for="in-code">Room</label>
+              <input type="text" id="in-code" placeholder="SR-XXXXX-XXXXX-…" maxlength="200" spellcheck="false" autocomplete="off" aria-describedby="j-code-help">
+            </div>
+            <p class="j-help" id="j-code-help">empty &rarr; new room &middot; code or sirr:// link</p>
+
+            <div class="j-actions">
+              <button id="btn-create" class="j-btn primary"><span>CREATE ROOM</span><span class="arrow" aria-hidden="true">&rarr;</span></button>
+              <button id="btn-join" class="j-btn" disabled><span>JOIN ROOM</span><span class="arrow" aria-hidden="true">&rarr;</span></button>
+            </div>
+
+            <div id="join-status" role="status" aria-live="polite"></div>
+          </div>
+        </main>
+
+        <!-- KEY PLATE — the user's own key material, rendered three ways:
+             hex dump, OpenSSH-style randomart, grouped fingerprint.
+             Filled by app.js (renderKeyPlate) from getIdentity(). -->
+        <section class="j-key" id="join-key" aria-label="Your identity key">
+          <div class="j-key-hd">
+            <span id="join-key-label">Identity fingerprint</span>
+            <span class="r">Generated locally</span>
+          </div>
+          <div class="j-key-body">
+            <div class="j-hex-wrap">
+              <div class="j-hex" id="join-hex"></div>
+              <div class="j-scan" aria-hidden="true"></div>
+              <p class="j-note">Your keypair never leaves this device. Peers only ever see the public half.</p>
+            </div>
+            <pre class="j-art" id="join-art" role="img" aria-label="Visual fingerprint of your key"></pre>
+          </div>
+          <div class="j-key-ft">
+            <div class="j-fp">
+              <span class="k">Fingerprint</span>
+              <span class="j-fp-big" id="join-fp-big">&mdash;&mdash;&mdash;&mdash;</span>
+            </div>
+            <span class="j-note r">Read it aloud to a peer to verify each other in person.</span>
+          </div>
+        </section>
+      </div>
+
+      <!-- BOTTOM STATUS LEDGER -->
+      <div class="j-bot">
+        <div class="j-stat">
+          <div class="k">Fingerprint</div>
+          <div class="v accent" id="join-fp">&mdash;&mdash;&mdash;&mdash;</div>
+        </div>
+        <div class="j-stat">
+          <div class="k">Key exchange</div>
+          <div class="v">X25519</div>
+        </div>
+        <div class="j-stat">
+          <div class="k">Cipher</div>
+          <div class="v">XSalsa20 &middot; Poly1305</div>
+        </div>
+        <div class="j-stat">
+          <div class="k">DHT Network</div>
+          <div class="v" id="dht-status"><span class="dht-dot searching"></span>SEARCHING</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHAT -->
+  <div id="chat-screen" class="screen">
+    <div class="chat">
+
+      <!-- RAIL -->
+      <div class="c-rail">
+        <div class="brand-container" id="brand-rail-toggle" title="Toggle Rooms/DMs">
+        <span class="mark"><svg class="mark-token" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.6 3.4A8.6 8.6 0 0 0 10.6 20.6Z"/><path d="M13.4 3.4A8.6 8.6 0 0 1 13.4 20.6"/><path class="seam" d="M13.4 3.4V20.6"/></svg></span>
+        <div id="global-unread-dot" class="global-dot hidden"></div>
+        </div>
+        <div id="room-rail" class="rooms"></div>
+        <button id="btn-add-room" class="add">+ NEW</button>
+      </div>
+
+      <!-- SIDEBAR -->
+      <div class="c-side">
+
+        <!-- Room header -->
+        <div class="c-side-head">
+          <div class="k">Room</div>
+          <div class="v">
+            <span id="sb-room-label" class="sb-room-label">Select a room</span>
+            <input type="text" id="sb-room-input" class="sb-room-input hidden" maxlength="30" spellcheck="false">
+          </div>
+          <div class="code">
+            <span id="sb-code">&mdash;</span>
+            <button id="btn-copy-code" class="copy">COPY</button>
+            <button id="btn-copy-link" class="copy link-btn" title="Copy sirr:// invite link">LINK</button>
+          </div>
+        </div>
+
+        <!-- Channels panel — voice + text sub-channels for the active room -->
+        <div class="panel channels-panel">
+
+          <!-- Voice section -->
+          <div class="chan-sec">
+            <div class="chan-hd">
+              <span class="chan-hd-lbl">&#x25C8; VOICE</span>
+              <span class="chan-hd-n" id="vchan-count">0</span>
+            </div>
+            <div id="vchan-list" class="chan-list"></div>
+            <button id="btn-add-vchan" class="chan-add" title="Add voice channel">+ ADD VOICE CHANNEL</button>
+          </div>
+
+          <!-- Crypto-styled rigid separator between voice + text sections -->
+          <div class="chan-sep" aria-hidden="true">
+            <span class="chan-sep-l"></span>
+            
+            <span class="chan-sep-r"></span>
+          </div>
+
+          <!-- Text section -->
+          <div class="chan-sec">
+            <div class="chan-hd">
+              <span class="chan-hd-lbl">&#x25C8; TEXT</span>
+              <span class="chan-hd-n" id="tchan-count">0</span>
+            </div>
+            <div id="tchan-list" class="chan-list"></div>
+            <button id="btn-add-tchan" class="chan-add" title="Add text channel">+ ADD TEXT CHANNEL</button>
+          </div>
+        </div>
+
+        <!-- Active-voice toolbar — shown only while connected to a voice channel -->
+        <div class="panel voice-panel voice-panel-compact">
+          <button id="btn-voice-join" class="voice-state hidden">
+            <span class="ind"></span>
+            <span class="lbl" id="voice-title">OFFLINE</span>
+            <span class="leave hidden" id="voice-state-leave">JOIN</span>
+          </button>
+          <div id="voice-users" class="voice-users"></div>
+          <div id="voice-ctrls" class="voice-ctrls hidden">
+            <button id="btn-mute"        class="vbtn act" title="Mute microphone">MIC</button>
+            <button id="btn-deaf"        class="vbtn act" title="Deafen (mute everyone for you)">DEAFEN</button>
+            <button id="btn-cam"         class="vbtn" title="Share camera">CAM</button>
+            <button id="btn-screen"      class="vbtn" title="Share screen">SHARE</button>
+            <button id="btn-open-call"   class="vbtn" title="Open the call screen">&#x2922; CALL</button>
+            <button id="btn-voice-leave" class="vbtn vd" title="Disconnect">DISCONNECT</button>
+          </div>
+          <span id="voice-count" class="hidden"></span>
+          <span id="voice-sub" class="sub hidden"></span>
+        </div>
+
+        <!-- Identity footer -->
+        <div class="c-side-foot">
+          <div id="sb-av" class="mon">?</div>
+          <div class="id">
+            <div class="nk" id="sb-nick">anon</div>
+            <div class="fp" id="sb-fp">----</div>
+          </div>
+          <button id="btn-settings" class="cog" title="Settings">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .4 1.9l.1.1a2 2 0 0 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.4 1.7 1.7 0 0 0-1 1.6V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.4l-.1.1a2 2 0 0 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .4-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.4-1.9l-.1-.1a2 2 0 0 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.4H9a1.7 1.7 0 0 0 1-1.6V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.4l.1-.1a2 2 0 0 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.4 1.9V9a1.7 1.7 0 0 0 1.6 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- MAIN -->
+      <div id="main-area" class="c-main"> 
+      <!-- Toast notification stack — top-center slide-down, reusable -->
+      <div id="toast-stack" class="toast-stack" aria-live="polite" aria-atomic="true"></div>
+
+        <!-- Top bar -->
+        <div class="c-top">
+          <div class="rm">
+            <span class="hash">#</span>
+            <span id="tb-room" class="name">room</span>
+            
+          </div>
+          <div></div>
+          <div class="readouts">
+            <button id="btn-pins" title="Pinned messages" class="pinBtn">&#x25C8; PINS <b id="pins-count">0</b></button>
+            <button id="btn-notifs" title="Notification center" class="notifBtn">△ NOTIFS <b id="notifs-count"></b></button>
+            <button id="btn-toggle-contacts" class="peers-toggle" title="Contacts">
+              ⚝ CONTACTS
+            </button>
+            <button id="btn-toggle-peers" class="peers-toggle" title="Peers ledger">
+              &#9776; PEERS
+            </button>
+          </div>
+        </div>
+
+        <!-- Messages -->
+        <div id="messages" class="c-msgs"></div>
+
+        <!-- File progress -->
+        <div id="file-progress" class="fprog hidden">
+          <div class="fprog-label">
+            <span id="fprog-name">Sending...</span>
+            <span id="fprog-pct">0%</span>
+            <button id="btn-fprog-cancel" class="fprog-cancel" title="Cancel">&#x2715;</button>
+          </div>
+          <div class="fprog-bar"><div id="fprog-fill" class="fprog-fill"></div></div>
+        </div>
+
+        <!-- Reply bar -->
+        <div id="dm-req-bar" class="rbar dmreq hidden">
+          <span class="dmreq-k">MESSAGE REQUEST</span>
+          <span id="dm-req-txt" class="dmreq-t"></span>
+          <button id="dm-req-accept" class="dmreq-b ok">ACCEPT</button>
+          <button id="dm-req-decline" class="dmreq-b">DECLINE</button>
+          <button id="dm-req-block" class="dmreq-b bad">BLOCK</button>
+        </div>
+        <div id="reply-bar" class="rbar hidden">
+          <div class="rbar-left">
+            <div class="rbar-accent"></div>
+            <div class="rbar-content">
+              <span class="rbar-nick" id="reply-nick"></span>
+              <span class="rbar-preview" id="reply-preview"></span>
+            </div>
+          </div>
+          <button id="btn-cancel-reply" class="rbar-x">&#x2715;</button>
+        </div>
+
+        <!-- Typing -->
+        <div id="typing-bar" class="tbar hidden">
+          <span class="tdots"><i></i><i></i><i></i></span>
+          <span id="typing-who"></span>
+        </div>
+
+        <!-- Compose -->
+        <div class="c-compose">
+          <span class="prompt">&gt;</span>
+          <input type="text" id="in-msg" placeholder="compose a transmission..." spellcheck="false">
+          <div class="actions">
+            <button id="btn-ttl" class="ttl-badge" title="Disappearing messages — click to cycle">OFF</button>
+            <button id="btn-nolog" class="ttl-badge" title="History is kept on this device — click to stop keeping it">LOG</button>
+            <button id="btn-attach" class="act-btn" title="Attach">
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21 11.5l-9 9a6 6 0 0 1-8.5-8.5l9-9a4 4 0 0 1 5.7 5.7l-9 9a2 2 0 0 1-2.8-2.8l8.3-8.3"/></svg>
+            </button>
+            <button id="btn-send" class="act-btn send" title="Send">
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Status strip — live transport health (RTT + counts). Crypto
+             identity (FP/Kex/Cipher) lives in the Settings → About panel
+             where it belongs; this strip is reserved for state that
+             actually changes during a session. -->
+        <div class="c-status">
+          <div class="cell quality" id="cs-quality" title="Hyperswarm RTT to the fastest peer">
+            <span class="bars" aria-hidden="true">
+              <i class="b b1"></i><i class="b b2"></i><i class="b b3"></i><i class="b b4"></i>
+            </span>
+            <b id="cs-route">SEARCHING</b>
+          </div>
+          <div class="cell"><span>Peers</span><b id="cs-peers">0</b></div>
+          <div class="cell"><span>Rooms</span><b id="cs-rooms">0</b></div>
+          <div class="cell"><span>Sessions</span><b id="cs-sessions">0</b></div>
+          <div class="cell"><span>Avg RTT</span><b id="cs-avgrtt">&mdash;</b></div>
+        </div>
+
+        <!-- Empty state -->
+        <div id="no-room" class="no-room">
+          <div class="no-room-icon"><svg class="mark-token" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.6 3.4A8.6 8.6 0 0 0 10.6 20.6Z"/><path d="M13.4 3.4A8.6 8.6 0 0 1 13.4 20.6"/><path class="seam" d="M13.4 3.4V20.6"/></svg></div>
+          <div class="no-room-text">Select or create a room</div>
+        </div>
+
+        <!-- CALL SCREEN — slides over the chat area when the user opens the
+             in-app call view (click already-joined voice channel, or the
+             EXPAND button in the voice controls). Contains a grid of live
+             video / audio-only tiles; clicking a tile focuses it.
+             Voice-call audio is still played through #voice-audio-pool, so
+             opening / closing this overlay never interrupts sound. -->
+        <aside id="call-screen" class="call-screen hidden" aria-label="Call">
+          <div class="call-hd">
+            <div class="call-title">
+              <span class="call-dot"></span>
+              <span class="call-k">IN CALL</span>
+              <b id="call-room-name">&mdash;</b>
+              <span class="call-sep">/</span>
+              <span id="call-channel-name">&mdash;</span>
+            </div>
+            <span class="call-link">LINK <b>E2E</b> &middot; NO SERVER</span>
+            <button id="btn-call-close" class="call-close" title="Back to chat" aria-label="Back to chat">&#x2715;</button>
+          </div>
+          <!-- In-call input/output picker. Switching is live: the mic
+               is swapped with replaceTrack(), so no renegotiation and
+               no gap in the call. -->
+          <div id="call-devices" class="call-devices hidden"></div>
+          <div id="call-alone" class="call-alone hidden" aria-live="polite"><div class="figure-host"></div><p>You're the only one here. Your level shows on the meter in the sidebar; anyone who joins hears you straight away.</p></div>
+          <div id="call-grid" class="call-grid empty">
+            <div class="call-empty">No camera or screen streams in this channel yet.</div>
+          </div>
+          <!-- Live per-peer link telemetry. Hidden by default; toggled
+               with the NET button. Proves the call is direct P2P. -->
+          <div id="call-stats" class="call-stats hidden"></div>
+          <!-- Control dock — full-width ledger of labelled cells. Icons are
+               CSS masks keyed on the id, so voice.js can keep writing the
+               label text (MIC/MUTED, OUT/DEAF) without losing them. -->
+          <div class="call-ctrls" role="toolbar" aria-label="Call controls">
+            <button id="btn-call-mute"   class="call-btn">MIC</button>
+            <button id="btn-call-deaf"   class="call-btn">OUT</button>
+            <button id="btn-call-cam"    class="call-btn">CAM</button>
+            <button id="btn-call-screen" class="call-btn">SHARE</button>
+            <button id="btn-call-devices" class="call-btn" title="Audio devices">AUDIO</button>
+            <button id="btn-call-stats"  class="call-btn" title="Link telemetry">NET</button>
+            <button id="btn-call-leave"  class="call-btn danger">LEAVE CALL</button>
+          </div>
+        </aside>
+      </div>
+
+      <!-- PEERS LEDGER — right-side drawer, closed by default -->
+      <aside id="peers-drawer" class="peers-drawer hidden">
+        <div class="peers-drawer-hd">
+          <span class="peers-drawer-title">&#x25C8; PEERS LEDGER</span>
+          <span class="peers-drawer-n"><b id="peer-count">0</b> connected</span>
+          <button id="btn-close-peers" class="ibtn" title="Close">&#x2715;</button>
+        </div>
+        <div id="peers-list" class="peers-drawer-body"></div>
+      </aside>
+
+      <!-- CONTACTS — right-side drawer, shares peers-drawer styling -->
+      <aside id="contacts-drawer" class="peers-drawer hidden">
+        <div class="peers-drawer-hd">
+          <span class="peers-drawer-title">&#x25C8; CONTACTS</span>
+          <span class="peers-drawer-n"><b id="contact-count">0</b> saved</span>
+          <button id="btn-close-contacts" class="ibtn" title="Close">&#x2715;</button>
+        </div>
+        <div id="contacts-list" class="peers-drawer-body"></div>
+      </aside>
+
+    </div>
+  </div>
+
+  <!-- INVITE picker — shown from contact row "INVITE" action -->
+  <div id="invite-ov" class="overlay hidden">
+    <div class="ov-bg"></div>
+    <div class="ov-panel ov-sm">
+      <div class="ov-top">
+        <span class="ov-title">Invite <b id="invite-nick">contact</b></span>
+        <button id="btn-close-invite" class="ibtn">&#x2715;</button>
+      </div>
+      <div class="invite-sub">Pick a room to invite them to:</div>
+      <div id="invite-rooms" class="invite-rooms"></div>
+    </div>
+  </div>
+
+  <!-- ADD ROOM -->
+  <div id="add-room-ov" class="overlay hidden"><div class="ov-bg"></div><div class="ov-panel ov-sm"><div class="ov-top"><span class="ov-title">Add Room</span><button id="btn-close-add" class="ibtn">&#x2715;</button></div><button id="btn-create2" class="btn1" style="margin-bottom:14px">CREATE NEW ROOM</button><div class="join-div"><span>or join</span></div><div class="fld"><label>ROOM CODE</label><input type="text" id="in-code2" placeholder="code or invite link" maxlength="200" spellcheck="false" style="text-transform:uppercase"></div><button id="btn-join2" class="btn2" disabled>JOIN</button></div></div>
+
+  <!-- SETTINGS -->
+  <div id="settings" class="overlay hidden">
+    <div class="ov-bg"></div>
+    <div class="ov-panel settings-panel">
+      <div class="ov-top">
+        <span class="ov-title">&#x25C8; SETTINGS</span>
+        <button id="btn-close-set" class="ibtn">&#x2715;</button>
+      </div>
+
+      <div class="settings-layout">
+        <!-- Left nav -->
+        <nav class="settings-tabs">
+          <button class="set-tab act" data-tab="identity"><span class="st-ic">@</span>Identity</button>
+          <button class="set-tab" data-tab="appearance"><span class="st-ic">&#x25A0;</span>Appearance</button>
+          <button class="set-tab" data-tab="notifs"><span class="st-ic">&#x25B3;</span>Notifications</button>
+          <button class="set-tab" data-tab="voice"><span class="st-ic">&#x266A;</span>Voice &amp; Video</button>
+          <button class="set-tab" data-tab="a11y"><span class="st-ic">&#x2295;</span>Accessibility</button>
+          <button class="set-tab" data-tab="privacy"><span class="st-ic">&#x25C8;</span>Privacy &amp; Safety</button>
+          <button class="set-tab" data-tab="data"><span class="st-ic">&#x21E9;</span>Data</button>
+          <button class="set-tab" data-tab="security"><span class="st-ic">&#x229D;</span>Security</button>
+          <button class="set-tab" data-tab="about"><span class="st-ic">&#x2139;</span>About</button>
+        </nav>
+
+        <!-- Panels -->
+        <div class="settings-content">
+
+          <!-- IDENTITY ─────────────────────────────────────────────── -->
+          <section class="set-panel act" data-tab="identity">
+            <div class="set-section-title">Your identity on Sirr</div>
+
+            <div class="fld">
+              <label>PROFILE PICTURE</label>
+              <div class="avatar-uploader">
+                <div id="set-avatar-preview" class="set-avatar-preview">?</div>
+                <div class="avatar-uploader-ctrls">
+                  <button id="btn-avatar-upload" class="topt">UPLOAD IMAGE</button>
+                  <button id="btn-avatar-clear" class="topt ghost">CLEAR</button>
+                  <div class="fld-sub">Images stay on this device; peers see your sigil (or emoji).</div>
+                </div>
+                <input type="file" id="avatar-file" accept="image/*" style="display:none">
+              </div>
+            </div>
+
+            <div class="fld">
+              <label>SIGIL <span class="fld-sub-inline">(shared with peers)</span></label>
+              <div id="sigil-editor"></div>
+              <div class="fld-sub">Draw the inside of your seal &mdash; pick a grid size for more detail. The rim is always your fingerprint&rsquo;s 64 bits, so someone copying your drawing still shows a different seal.</div>
+            </div>
+
+            <div class="fld">
+              <label>NICKNAME</label>
+              <input type="text" id="set-nick" maxlength="20" spellcheck="false">
+            </div>
+
+            <div class="fld">
+              <label>AVATAR EMOJI <span class="fld-sub-inline">(shared with peers)</span></label>
+              <div class="ep">
+                <button class="edot" data-e="">Aa</button>
+                <button class="edot" data-e="👻">👻</button>
+                <button class="edot" data-e="🎭">🎭</button>
+                <button class="edot" data-e="🔮">🔮</button>
+                <button class="edot" data-e="⚡">⚡</button>
+                <button class="edot" data-e="🦊">🦊</button>
+                <button class="edot" data-e="🐉">🐉</button>
+                <button class="edot" data-e="💀">💀</button>
+                <button class="edot" data-e="🤖">🤖</button>
+                <button class="edot" data-e="🔥">🔥</button>
+                <button class="edot" data-e="🌙">🌙</button>
+                <button class="edot" data-e="🎯">🎯</button>
+                <button class="edot" data-e="🐺">🐺</button>
+                <button class="edot" data-e="🦅">🦅</button>
+                <button class="edot" data-e="🦉">🦉</button>
+                <button class="edot" data-e="🐙">🐙</button>
+                <button class="edot" data-e="🦂">🦂</button>
+                <button class="edot" data-e="🕷️">🕷️</button>
+                <button class="edot" data-e="🐍">🐍</button>
+                <button class="edot" data-e="🦇">🦇</button>
+                <button class="edot" data-e="👁️">👁️</button>
+                <button class="edot" data-e="🧊">🧊</button>
+                <button class="edot" data-e="❄️">❄️</button>
+                <button class="edot" data-e="🌑">🌑</button>
+                <button class="edot" data-e="⭐">⭐</button>
+                <button class="edot" data-e="✨">✨</button>
+                <button class="edot" data-e="💎">💎</button>
+                <button class="edot" data-e="🗝️">🗝️</button>
+                <button class="edot" data-e="🛡️">🛡️</button>
+                <button class="edot" data-e="⚔️">⚔️</button>
+                <button class="edot" data-e="🎲">🎲</button>
+                <button class="edot" data-e="♟️">♟️</button>
+                <button class="edot" data-e="🧩">🧩</button>
+                <button class="edot" data-e="🌀">🌀</button>
+                <button class="edot" data-e="☢️">☢️</button>
+                <button class="edot" data-e="☣️">☣️</button>
+                <button class="edot" data-e="🜏">🜏</button>
+                <button class="edot" data-e="🦴">🦴</button>
+                <button class="edot" data-e="🪐">🪐</button>
+                <button class="edot" data-e="🛸">🛸</button>
+              </div>
+            </div>
+
+            <div class="fld">
+              <label>STATUS LINE</label>
+              <input type="text" id="set-status" maxlength="40" spellcheck="false" placeholder="What's up?">
+            </div>
+          </section>
+
+          <!-- APPEARANCE ───────────────────────────────────────────── -->
+          <section class="set-panel" data-tab="appearance">
+            <div class="set-section-title">Theme &amp; layout</div>
+
+            <div class="fld">
+              <label>ACCENT COLOR</label>
+              <div class="cp">
+                <button class="cd" data-c="#4ff0a0" style="background:#4ff0a0" aria-label="Phosphor (default)" title="Phosphor"></button>
+                <button class="cd" data-c="#f9b64f" style="background:#f9b64f" aria-label="Amber" title="Amber"></button>
+                <button class="cd" data-c="#5ad2f4" style="background:#5ad2f4" aria-label="Cyan" title="Cyan"></button>
+                <button class="cd" data-c="#b4a0ff" style="background:#b4a0ff" aria-label="Violet" title="Violet"></button>
+                <button class="cd" data-c="#ff7a6b" style="background:#ff7a6b" aria-label="Signal red" title="Signal red"></button>
+                <button class="cd" data-c="#e8e6df" style="background:#e8e6df" aria-label="Paper" title="Paper"></button>
+              </div>
+            </div>
+
+            <div class="fld">
+              <label>FONT SIZE</label>
+              <div class="sp">
+                <button class="so" data-s="0.85">S</button>
+                <button class="so" data-s="1">M</button>
+                <button class="so" data-s="1.15">L</button>
+                <button class="so" data-s="1.3">XL</button>
+              </div>
+            </div>
+
+            <div class="fld">
+              <label>MESSAGE LAYOUT</label>
+              <div class="sp">
+                <button class="lyop" data-ly="irc">IRC</button>
+                <button class="lyop" data-ly="cards">Cards</button>
+              </div>
+              <div class="fld-sub">IRC: one line per message, time and nick in columns. Cards: avatar, fingerprint and signature on every message.</div>
+            </div>
+
+            <div class="fld">
+              <label>DENSITY</label>
+              <div class="sp">
+                <button class="dopt" data-d="compact">Compact</button>
+                <button class="dopt" data-d="default">Default</button>
+                <button class="dopt" data-d="cozy">Cozy</button>
+              </div>
+            </div>
+
+            <div class="fld">
+              <label>MESSAGE BUBBLES</label>
+              <div class="sp">
+                <button class="bopt" data-b="flat">Flat</button>
+                <button class="bopt" data-b="subtle">Subtle</button>
+                <button class="bopt" data-b="glass">Glass</button>
+              </div>
+            </div>
+
+            <div class="fld">
+              <label>CHAT BACKGROUND</label>
+              <div class="sp">
+                <button class="bgop" data-bg="none">None</button>
+                <button class="bgop" data-bg="dots">Dots</button>
+                <button class="bgop" data-bg="grid">Grid</button>
+                <button class="bgop" data-bg="circuit">Circuit</button>
+              </div>
+            </div>
+
+            <div class="fld">
+              <label>TIME FORMAT</label>
+              <div class="sp">
+                <button class="topt" data-t="12">12-hour</button>
+                <button class="topt" data-t="24">24-hour</button>
+              </div>
+            </div>
+          </section>
+
+          <!-- NOTIFICATIONS ────────────────────────────────────────── -->
+          <section class="set-panel" data-tab="notifs">
+            <div class="set-section-title">Sound &amp; alerts</div>
+
+            <div class="fld">
+              <label>SOUND ON MESSAGE</label>
+              <div class="sp">
+                <button class="nopt" data-n="on">On</button>
+                <button class="nopt" data-n="off">Off</button>
+              </div>
+            </div>
+
+            <div class="fld">
+              <label>DESKTOP NOTIFICATIONS</label>
+              <div class="sp">
+                <button class="ntop" data-nt="all">All messages</button>
+                <button class="ntop" data-nt="mentions">Mentions only</button>
+                <button class="ntop" data-nt="off">Off</button>
+              </div>
+              <div class="fld-sub">Shown by the OS when Sirr is minimized or in the tray.</div>
+            </div>
+
+            <div class="fld">
+              <label>MENTION TOASTS</label>
+              <div class="sp">
+                <button class="mentop" data-ment="on">On</button>
+                <button class="mentop" data-ment="off">Off</button>
+              </div>
+              <div class="fld-sub">In-app toast when someone writes &#x2018;@yourname&#x2019;.</div>
+            </div>
+          </section>
+
+          <!-- VOICE & VIDEO ────────────────────────────────────────── -->
+          <section class="set-panel" data-tab="voice">
+            <div class="set-section-title">Voice call behaviour</div>
+
+            <div class="fld">
+              <label>MIC CHECK</label>
+              <div class="mic-test">
+                <button id="btn-mic-test" class="topt">TEST MIC</button>
+                <div class="mic-test-meter" id="mic-test-meter" aria-hidden="true"></div>
+                <span class="mic-test-db" id="mic-test-db">&mdash;</span>
+              </div>
+              <div class="fld-sub">Speak: the bar should reach past the middle. Nothing is sent anywhere &mdash; the mic is only opened on this device, and closed when you stop or leave settings.</div>
+            </div>
+
+            <div class="fld">
+              <label>AUTO-MUTE ON JOIN</label>
+              <div class="sp">
+                <button class="automop" data-am="off">Off</button>
+                <button class="automop" data-am="on">On</button>
+              </div>
+              <div class="fld-sub">Start muted when joining a voice channel.</div>
+            </div>
+
+            <div class="fld">
+              <label>NOISE GATE</label>
+              <div class="sp">
+                <button class="ngop" data-ng="off">Off</button>
+                <button class="ngop" data-ng="low">Low</button>
+                <button class="ngop" data-ng="mid">Medium</button>
+                <button class="ngop" data-ng="high">High</button>
+              </div>
+              <div class="fld-sub">Only transmit when mic input is above this threshold.</div>
+            </div>
+
+            <div class="set-section-title">Audio engine</div>
+
+            <div class="fld">
+              <label>QUALITY PROFILE</label>
+              <div class="sp">
+                <button class="apop" data-ap="lowband">Low bandwidth</button>
+                <button class="apop" data-ap="voice">Voice</button>
+                <button class="apop" data-ap="studio">Studio</button>
+              </div>
+              <div class="fld-sub">
+                Voice &mdash; 96&nbsp;kbit/s mono with echo cancellation. The default.<br>
+                Studio &mdash; 320&nbsp;kbit/s stereo, all browser processing off.
+                Full fidelity for music and close listening. <b>Headphones required</b>
+                or you will echo badly.<br>
+                Low bandwidth &mdash; 24&nbsp;kbit/s with silence suppression, for tethering.<br>
+                Takes effect the next time you join a channel.
+              </div>
+            </div>
+
+            <div class="fld">
+              <label>PACKET REDUNDANCY</label>
+              <div class="sp">
+                <button class="arop" data-ar="off">Off</button>
+                <button class="arop" data-ar="on">On</button>
+              </div>
+              <div class="fld-sub">
+                Each audio packet carries a copy of the previous one (RFC&nbsp;2198 RED),
+                so a dropped packet is reconstructed instead of heard as a gap.
+                Roughly doubles audio bandwidth &mdash; free on a direct peer link.
+                This is the single biggest quality difference on an unstable connection.
+              </div>
+            </div>
+
+            <div class="fld">
+              <label>LATENCY TARGET</label>
+              <div class="sp">
+                <button class="alop" data-al="low">Low</button>
+                <button class="alop" data-al="balanced">Balanced</button>
+                <button class="alop" data-al="stable">Stable</button>
+              </div>
+              <div class="fld-sub">
+                How much audio to hold in the playout buffer. Low (40&nbsp;ms) feels
+                immediate on a good link; Stable (250&nbsp;ms) rides out a bad one.
+                The buffer still adapts upward on its own when the network demands it.
+              </div>
+            </div>
+
+            <div class="fld">
+              <label>NEURAL NOISE SUPPRESSION</label>
+              <div class="sp">
+                <button class="dnop" data-dn="off">Off</button>
+                <button class="dnop" data-dn="on">On</button>
+              </div>
+              <div class="fld-sub">
+                Runs RNNoise locally instead of the browser's suppressor. Better on
+                keyboards, fans, and street noise, and it does not duck room tone.
+                Adds 10&nbsp;ms of latency and a little CPU. Nothing leaves your machine.
+                Falls back to your raw microphone if it cannot start.
+                Takes effect the next time you join a channel.
+              </div>
+            </div>
+
+            <div class="set-section-title">Voice route</div>
+
+            <div class="fld">
+              <label>VOICE ROUTE</label>
+              <div class="sp">
+                <button class="vrop" data-vr="auto">Auto</button>
+                <button class="vrop" data-vr="swarm">Swarm only</button>
+              </div>
+              <div class="fld-sub">
+                <b>Auto</b> connects voice directly over WebRTC and, if that link
+                can't be established with someone (strict NAT, blocked UDP,
+                STUN unreachable), carries your voice over the same encrypted
+                Hyperswarm connection your chat already uses. If you can text
+                them, you can talk to them.<br><br>
+                <b>Swarm only</b> never opens a WebRTC connection, so no STUN
+                server ever learns you are placing a call. Slightly higher
+                latency; screen share and camera are unavailable.
+                Takes effect the next time you join a channel.
+              </div>
+            </div>
+
+            <div class="set-section-title">Mesh voice &mdash; experimental</div>
+
+            <div class="fld">
+              <label>MESH VOICE</label>
+              <div class="sp">
+                <button class="mvop" data-mv="off">Off</button>
+                <button class="mvop" data-mv="on">On</button>
+              </div>
+              <div class="fld-sub">
+                Sirr's own audio pipeline instead of the browser's:
+                our Opus encoder settings, our packet format, our jitter
+                buffer, our redundancy. Both people need it on.<br><br>
+                Each direction switches to mesh only once the other side
+                confirms it is actually decoding your audio, and falls back to
+                standard voice within about a second if that stops &mdash; so
+                it cannot leave you in a silent call.
+                <b>Experimental &mdash; expect to report bugs.</b>
+                Takes effect the next time you join a channel.
+              </div>
+            </div>
+
+            <div class="fld">
+              <label>MESH BUFFER</label>
+              <div class="sp">
+                <button class="mbop" data-mb="tight">Tight</button>
+                <button class="mbop" data-mb="balanced">Balanced</button>
+                <button class="mbop" data-mb="robust">Robust</button>
+              </div>
+              <div class="fld-sub">
+                Our own adaptive buffer, so these are real bounds rather than
+                a hint to the browser. Tight targets 20&ndash;120&nbsp;ms,
+                Balanced 40&ndash;260&nbsp;ms, Robust 80&ndash;500&nbsp;ms.
+                It grows quickly when the network gets worse and shrinks
+                slowly when it improves. Applies live.
+              </div>
+            </div>
+
+            <div class="fld">
+              <label>MESH REDUNDANCY</label>
+              <div class="sp">
+                <button class="mrop" data-mr="off">Off</button>
+                <button class="mrop" data-mr="on">On</button>
+              </div>
+              <div class="fld-sub">
+                Each packet also carries a copy of an <i>older</i> frame, not the
+                immediately previous one. That spacing is the point: it survives
+                a burst of consecutive lost packets, which is the failure mode
+                that actually ruins calls and the one plain RED cannot cover.
+                In testing, 20% packet loss came out under 1% audible gaps.
+              </div>
+            </div>
+
+            <div class="fld">
+              <label>REDUNDANCY SPACING</label>
+              <div class="sp">
+                <button class="msop" data-ms="2">2 frames</button>
+                <button class="msop" data-ms="3">3 frames</button>
+                <button class="msop" data-ms="5">5 frames</button>
+                <button class="msop" data-ms="8">8 frames</button>
+              </div>
+              <div class="fld-sub">
+                How far back the spare copy sits, in 20&nbsp;ms frames. Wider
+                spacing survives longer bursts; narrower recovers sooner from
+                isolated losses. 3 is a good default.
+              </div>
+            </div>
+          </section>
+
+          <!-- ACCESSIBILITY ───────────────────────────────────────── -->
+          <section class="set-panel" data-tab="a11y">
+            <div class="set-section-title">Motion, contrast, and comfort</div>
+
+            <div class="fld">
+              <label>REDUCE MOTION</label>
+              <div class="sp">
+                <button class="rmop" data-rm="off">Off</button>
+                <button class="rmop" data-rm="on">On</button>
+              </div>
+              <div class="fld-sub">Disable transitions, toasts slide-ins, and UI animations.</div>
+            </div>
+
+            <div class="fld">
+              <label>HIGH CONTRAST</label>
+              <div class="sp">
+                <button class="hcop" data-hc="off">Off</button>
+                <button class="hcop" data-hc="on">On</button>
+              </div>
+              <div class="fld-sub">Thicker borders and stronger text colors.</div>
+            </div>
+
+            <div class="fld">
+              <label>LARGE CLICK TARGETS</label>
+              <div class="sp">
+                <button class="ltop" data-lt="off">Off</button>
+                <button class="ltop" data-lt="on">On</button>
+              </div>
+              <div class="fld-sub">Taller buttons and wider touch areas.</div>
+            </div>
+          </section>
+
+          <!-- PRIVACY & SAFETY ───────────────────────────────────── -->
+          <section class="set-panel" data-tab="privacy">
+            <div class="set-section-title">What you share &amp; who can reach you</div>
+
+            <div class="fld">
+              <label>AUTO-DOWNLOAD FILES</label>
+              <div class="sp">
+                <button class="adopt" data-ad="off">Off</button>
+                <button class="adopt" data-ad="on">On</button>
+              </div>
+              <div class="fld-sub">Incoming files are saved to Downloads as soon as they arrive.</div>
+            </div>
+
+            <div class="fld">
+              <label>SEND TYPING INDICATOR</label>
+              <div class="sp">
+                <button class="tyop" data-ty="on">On</button>
+                <button class="tyop" data-ty="off">Off</button>
+              </div>
+              <div class="fld-sub">Let peers see the &ldquo;typing&hellip;&rdquo; bar while you compose.</div>
+            </div>
+
+            <div class="fld">
+              <label>LINK PREVIEWS</label>
+              <div class="sp">
+                <button class="lpop" data-lp="off">Off</button>
+                <button class="lpop" data-lp="on">On</button>
+              </div>
+              <div class="fld-sub">Fetch a title and image for links <i>you</i> send (never for links from others, which would reveal your IP to whoever posted them). <b>The target site sees your IP</b>, so it&rsquo;s off by default.</div>
+            </div>
+
+            <div class="fld">
+              <label>HIDE FROM SCREEN CAPTURE</label>
+              <div class="sp">
+                <button class="cpop" data-cp="off">Off</button>
+                <button class="cpop" data-cp="on">On</button>
+              </div>
+              <div class="fld-sub">The window shows as black in screenshots, recordings and screen shares on Windows and macOS &mdash; including malware that takes screenshots. It can&rsquo;t stop a camera pointed at the screen.</div>
+            </div>
+
+            <div class="fld">
+              <label>REACHABLE BY FINGERPRINT</label>
+              <div class="sp">
+                <button class="ibop" data-ib="off">Off</button>
+                <button class="ibop" data-ib="on">On</button>
+              </div>
+              <div class="fld-sub">Listen on a public inbox so people you share no room with can send you a message request. <b>Anyone who has seen your fingerprint can then find your IP address while you are online</b>, so it&rsquo;s off by default.</div>
+            </div>
+
+            <div class="fld">
+              <label>ECHOES &mdash; OFFLINE DELIVERY</label>
+              <div class="sp">
+                <button class="ecop" data-ec="off">Off</button>
+                <button class="ecop" data-ec="on">On</button>
+              </div>
+              <div class="fld-sub">When someone in the room is offline, a sealed copy of your text messages waits inside the DHT itself &mdash; no server, no member holding it &mdash; and is found when they come back, even if you&rsquo;re gone by then. It lives 48 h and every member who reads it keeps it alive another 48 h. <b>Trade-off:</b> echoes are sealed with a key from the room code, not a forward-secret session &mdash; someone recording DHT traffic who later gets the room code could read that window.</div>
+            </div>
+
+            <div class="fld">
+              <label>COVER TRAFFIC</label>
+              <div class="sp">
+                <button class="ctop" data-ct="off">Off</button>
+                <button class="ctop" data-ct="on">On</button>
+              </div>
+              <div class="fld-sub">Every link also carries encrypted chaff at random moments, padded like real messages, so someone watching your connection can&rsquo;t tell when you are talking. Costs a little bandwidth (about 1 KB per peer every few seconds).</div>
+            </div>
+
+            <div class="fld">
+              <label>SEND JITTER</label>
+              <div class="sp">
+                <button class="sjop" data-sj="0">Off</button>
+                <button class="sjop" data-sj="2000">Up to 2 s</button>
+                <button class="sjop" data-sj="8000">Up to 8 s</button>
+              </div>
+              <div class="fld-sub">Hold each message for a random moment before it leaves (order is kept). Blurs typing rhythm and how fast who answers whom. All messages are already padded to fixed sizes.</div>
+            </div>
+
+            <div class="set-section-title" style="margin-top:22px">Getting through &mdash; censorship &amp; shutdowns</div>
+            <div class="fld">
+              <label>STATUS</label>
+              <div id="path-status" class="fld-sub mono">&mdash;</div>
+            </div>
+
+            <div class="fld">
+              <label>NEARBY &mdash; LAN &amp; BLUETOOTH</label>
+              <div class="sp">
+                <button class="nbop" data-nb="off">Off</button>
+                <button class="nbop" data-nb="on">On</button>
+              </div>
+              <div class="fld-sub">Find room members on the same Wi-Fi or hotspot (and over Bluetooth where available) with <b>no internet at all</b>. Every nearby device running Sirr relays encrypted beacons a few hops further, so the more people use it the further it reaches. Relays never see contents or rooms. Someone on the same network can tell a Sirr device is present.</div>
+            </div>
+
+            <div class="fld">
+              <label for="entry-points">ENTRY POINTS</label>
+              <textarea id="entry-points" class="tin mono" rows="2" spellcheck="false" placeholder="host:port, one or more — DHT nodes you can reach"></textarea>
+              <div class="fld-sub">The DHT is normally entered through three public nodes; if those are blocked, Sirr tries nodes it remembers from earlier sessions, then these. Invite links carry a couple of entry points too.</div>
+            </div>
+
+            <div class="fld">
+              <label for="bridge-url">BRIDGE</label>
+              <input id="bridge-url" class="tin mono" spellcheck="false" placeholder="wss://… (leave empty to connect directly)">
+              <div id="bridge-hint" class="fld-sub hidden"></div>
+              <div class="fld-sub">Carry all of Sirr through one WebSocket to a bridge someone runs for you. Behind HTTPS it looks like an ordinary website, so traffic filters that recognise peer-to-peer UDP don&rsquo;t see Sirr. The bridge sees only end-to-end ciphertext, but it can see your IP and when you&rsquo;re online.</div>
+            </div>
+
+            <div class="fld">
+              <label>RELAYS</label>
+              <div class="sp">
+                <button class="rlop" data-rl="off">Off</button>
+                <button class="rlop" data-rl="auto">When needed</button>
+                <button class="rlop" data-rl="always">Always</button>
+              </div>
+              <div class="fld-sub">When two people can&rsquo;t reach each other directly (mobile networks, strict NAT), a volunteer&rsquo;s blind relay passes the encrypted stream along. It can&rsquo;t read it.</div>
+            </div>
+
+            <div class="fld">
+              <label>HELP OTHERS CONNECT</label>
+              <div class="sp">
+                <button class="rvop" data-rv="off">Off</button>
+                <button class="rvop" data-rv="on">Volunteer as a relay</button>
+              </div>
+              <div class="fld-sub">Relay encrypted streams for up to 24 strangers who can&rsquo;t connect directly. Costs your bandwidth while Sirr runs; new relay key every launch.</div>
+            </div>
+
+            <div class="fld">
+              <label for="bridge-port">RUN A BRIDGE</label>
+              <input id="bridge-port" class="tin mono" inputmode="numeric" placeholder="49443 · empty = off" style="max-width:220px">
+              <div class="fld-sub">Only useful on a machine others can reach (public IP or a forwarded port). Put it behind a TLS proxy on :443 so it looks like a website, then give the <code>wss://</code> address to people who need it.</div>
+            </div>
+
+            <div class="fld">
+              <label>ENTRY POINTS IN INVITES</label>
+              <div class="sp">
+                <button class="ihop" data-ih="on">DHT nodes</button>
+                <button class="ihop" data-ih="bridge">DHT nodes + my bridge</button>
+                <button class="ihop" data-ih="off">None</button>
+              </div>
+              <div style="margin-top:12px"><button id="btn-path-restart" class="topt ghost">RESTART TO APPLY CHANGES</button></div>
+            </div>
+
+            <div class="fld">
+              <label>BLOCKED PEERS</label>
+              <div id="blocklist-mgr" class="blocklist-mgr"></div>
+            </div>
+          </section>
+
+          <!-- DATA ──────────────────────────────────────────────── -->
+          <section class="set-panel" data-tab="data">
+            <div class="set-section-title">Backup &amp; restore</div>
+
+            <div class="fld">
+              <label for="backup-pass">EXPORT / IMPORT</label>
+              <input type="password" id="backup-pass" class="tin" placeholder="backup passphrase (10+ characters)" autocomplete="new-password" spellcheck="false" style="margin-bottom:8px">
+              <div class="sp">
+                <button id="btn-export-data" class="topt">EXPORT</button>
+                <button id="btn-import-data" class="topt">IMPORT</button>
+              </div>
+              <div class="data-note">Bundles your identity key, rooms, contacts, pins and message history into one file sealed with the passphrase above (scrypt + XSalsa20-Poly1305). Choose a long passphrase: the file can be attacked offline. Importing replaces your current data and requires a restart.</div>
+            </div>
+          </section>
+
+          <!-- SECURITY ──────────────────────────────────────────── -->
+          <section class="set-panel" data-tab="security">
+            <div class="set-section-title">Cryptographic posture</div>
+
+            <div class="secbox">
+              <div class="sr"><span>Encryption</span><span class="v1">Active</span></div>
+              <div class="sr"><span>Protocol</span><span>NaCl Box</span></div>
+              <div class="sr"><span>Key Exchange</span><span>X25519 triple-DH, transcript-bound</span></div>
+              <div class="sr"><span>Cipher</span><span>XSalsa20&middot;Poly1305</span></div>
+              <div class="sr"><span>Server</span><span class="v1">None</span></div>
+              <div class="sr"><span>Forward secrecy</span><span class="v1">Ephemeral X25519 per link</span></div>
+              <div class="sr"><span>At rest</span><span class="v1" id="sec-atrest">Sealed by OS keychain</span></div>
+            </div>
+
+            <div class="fld" style="margin-top:12px">
+              <label>YOUR FINGERPRINT</label>
+              <div id="set-fp" class="fpbox">----</div>
+              <div class="fld-sub">Share this with people you trust so they can verify you&rsquo;re really you.</div>
+            </div>
+
+            <div class="set-section-title" style="margin-top:22px">App lock</div>
+            <div class="fld">
+              <label>PASSPHRASE <span class="fld-sub-inline" id="lock-state">(off)</span></label>
+              <input type="password" id="lock-cur" class="tin hidden" placeholder="current passphrase" autocomplete="off" spellcheck="false" style="margin-bottom:6px">
+              <input type="password" id="lock-new" class="tin" placeholder="new passphrase (8+ characters)" autocomplete="new-password" spellcheck="false" style="margin-bottom:6px">
+              <input type="password" id="lock-duress" class="tin" placeholder="duress passphrase (optional)" autocomplete="off" spellcheck="false" style="margin-bottom:8px">
+              <div class="sp">
+                <button id="btn-lock-set" class="topt">TURN ON</button>
+                <button id="btn-lock-off" class="topt ghost hidden">TURN OFF</button>
+                <button id="btn-lock-now" class="topt ghost hidden">LOCK NOW</button>
+              </div>
+              <div id="lock-msg" class="fld-sub"></div>
+              <div class="fld-sub">Seals your data key and identity under the passphrase as well as the OS keychain: a laptop taken while you&rsquo;re logged in still opens to a lock screen. <b>Typing the duress passphrase there silently destroys everything</b> and Sirr opens as a fresh install. There is no recovery if you forget the passphrase.</div>
+            </div>
+            <div class="fld">
+              <label>LOCK WHEN THE COMPUTER LOCKS OR SLEEPS</label>
+              <div class="sp">
+                <button class="lsop" data-ls="off">Off</button>
+                <button class="lsop" data-ls="on">On</button>
+              </div>
+            </div>
+            <div class="fld">
+              <label>LOCK AFTER IDLE</label>
+              <div class="sp">
+                <button class="alop" data-al="0">Never</button>
+                <button class="alop" data-al="5">5 min</button>
+                <button class="alop" data-al="15">15 min</button>
+                <button class="alop" data-al="60">1 h</button>
+              </div>
+              <div class="fld-sub">Locking restarts Sirr into the lock screen, so no key stays in memory.</div>
+            </div>
+
+            <div class="set-section-title" style="margin-top:22px">Panic</div>
+            <div class="fld">
+              <label>PANIC WIPE</label>
+              <input type="text" id="wipe-confirm" class="tin" placeholder="type WIPE to arm" autocomplete="off" spellcheck="false" style="margin-bottom:8px">
+              <div class="sp"><button id="btn-wipe" class="topt danger" disabled>DESTROY EVERYTHING ON THIS DEVICE</button></div>
+              <div class="fld-sub">Shreds the data key and identity key first &mdash; from that instant every message, file and room code on disk is unreadable &mdash; then deletes the rest and quits. Other members keep what they received.</div>
+            </div>
+            <div class="fld">
+              <label>PANIC SHORTCUT <span class="fld-sub-inline">Ctrl/Cmd + Alt + Shift + X</span></label>
+              <div class="sp">
+                <button class="phop" data-ph="off">Off</button>
+                <button class="phop" data-ph="on">On</button>
+              </div>
+              <div class="fld-sub">Works system-wide, even with Sirr in the tray. No confirmation.</div>
+            </div>
+          </section>
+
+          <!-- ABOUT ──────────────────────────────────────────────── -->
+          <section class="set-panel" data-tab="about">
+            <div class="set-section-title">Sirr</div>
+            <div class="about-block">
+              <div class="about-line"><span>Version</span><b id="ver-about">v—</b></div>
+              <div class="about-line"><span>Transport</span><b>Hyperswarm DHT</b></div>
+              <div class="about-line"><span>Identity</span><b>X25519 key &middot; SHA-256 fingerprint</b></div>
+              <div class="about-line"><span>License</span><b>AGPL-3.0-or-later</b></div>
+              <div class="about-line"><span>Source</span><b>free software &middot; audit it, fork it, share it</b></div>
+              <div class="about-tagline">Peer-to-peer. No servers. No accounts. No central authority.</div>
+              <div class="about-copyright"><i>Sirr</i> &mdash; Arabic for a secret kept between two. Also: <b>S</b>erverless <b>I</b>nternet <b>R</b>elay-free <b>R</b>ooms. IRC, minus the servers.</div>
+            </div>
+
+          </section>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- IMAGE PREVIEW -->
+  <div id="img-prev" class="overlay hidden"><div class="ov-bg"></div><div class="img-prev-p"><img id="img-prev-src"><div class="img-prev-bar"><span id="img-prev-name"></span><div class="img-prev-btns"><button id="btn-img-no" class="btn2" style="width:auto;padding:8px 14px">Cancel</button><button id="btn-img-yes" class="btn1" style="width:auto;padding:8px 14px">Send</button></div></div></div></div>
+  <!-- FULLSCREEN -->
+  <div id="img-view" class="overlay hidden"><div class="ov-bg"></div><div class="img-view-wrap"><img id="img-view-src" class="img-view-i"><div class="img-view-bar"><button id="btn-img-dl" class="btn1" style="width:auto;padding:8px 16px">&#x2B07; Download</button><button id="btn-img-close" class="btn2" style="width:auto;padding:8px 16px">Close</button></div></div></div>
+  <!-- SCREEN SHARE VIEWER -->
+  <div id="screen-view" class="screen-view hidden"><div class="sv-header"><span id="sv-label">Screen Share</span><button id="btn-sv-close" class="ibtn" style="color:var(--hi)">&#x2715;</button></div><video id="sv-video" class="sv-video" autoplay playsinline></video></div>
+  <!-- EMOJI PICKER -->
+  <div id="emoji-picker" class="epicker hidden"><button class="ep-emoji" data-r="👍">👍</button><button class="ep-emoji" data-r="❤️">❤️</button><button class="ep-emoji" data-r="😂">😂</button><button class="ep-emoji" data-r="😮">😮</button><button class="ep-emoji" data-r="😢">😢</button><button class="ep-emoji" data-r="🔥">🔥</button><button class="ep-emoji" data-r="👀">👀</button><button class="ep-emoji" data-r="🎉">🎉</button><button class="ep-emoji" data-r="💀">💀</button><button class="ep-emoji" data-r="✅">✅</button></div>
+
+  <!-- Hidden container for remote peers' <audio> elements.
+       Electron autoplays media more reliably when the element is in DOM. -->
+  <div id="voice-audio-pool" style="display:none"></div>
+
+  
+
+  <!-- Keyboard shortcuts overlay -->
+  <div id="shortcuts-ov" class="overlay hidden">
+    <div class="ov-bg"></div>
+    <div class="ov-panel">
+      <div class="ov-top">
+        <span class="ov-title">&#x25C8; KEYBOARD SHORTCUTS</span>
+        <button id="btn-close-shortcuts" class="ibtn">&#x2715;</button>
+      </div>
+      <div class="kbd-grid">
+        <div class="kbd-sec">NAVIGATION</div>
+        <div class="kbd-row"><span>Quick switch room</span><span><kbd>Ctrl</kbd><kbd>K</kbd></span></div>
+        <div class="kbd-row"><span>Go to room 1–9</span><span><kbd>Alt</kbd><kbd>1</kbd>&nbsp;…&nbsp;<kbd>Alt</kbd><kbd>9</kbd></span></div>
+        <div class="kbd-row"><span>Next / previous room</span><span><kbd>Ctrl</kbd><kbd>&#8595;</kbd> / <kbd>Ctrl</kbd><kbd>&#8593;</kbd></span></div>
+        <div class="kbd-row"><span>Toggle peers ledger</span><span><kbd>Ctrl</kbd><kbd>P</kbd></span></div>
+        <div class="kbd-row"><span>Toggle contacts</span><span><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>C</kbd></span></div>
+        <div class="kbd-sec">COMPOSE</div>
+        <div class="kbd-row"><span>Focus compose</span><span><kbd>Ctrl</kbd><kbd>/</kbd></span></div>
+        <div class="kbd-row"><span>Mention peer</span><span><kbd>@</kbd></span></div>
+        <div class="kbd-row"><span>Send</span><span><kbd>Enter</kbd></span></div>
+        <div class="kbd-row"><span>Cancel reply / close overlays</span><span><kbd>Esc</kbd></span></div>
+        <div class="kbd-sec">ACTIONS</div>
+        <div class="kbd-row"><span>New room</span><span><kbd>Ctrl</kbd><kbd>N</kbd></span></div>
+        <div class="kbd-row"><span>Settings</span><span><kbd>Ctrl</kbd><kbd>,</kbd></span></div>
+        <div class="kbd-row"><span>Show this help</span><span><kbd>?</kbd>&nbsp;or&nbsp;<kbd>Ctrl</kbd><kbd>/</kbd></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick room switcher — Ctrl+K -->
+  <div id="qswitch-ov" class="overlay hidden">
+    <div class="ov-bg"></div>
+    <div class="ov-panel ov-sm qswitch-panel">
+      <div class="qswitch-input-wrap">
+        <span class="qswitch-prefix">&gt;</span>
+        <input type="text" id="qswitch-input" placeholder="Jump to room, channel or contact..." spellcheck="false" autocomplete="off">
+      </div>
+      <div id="qswitch-list" class="qswitch-list"></div>
+    </div>
+  </div>
+
+  <!-- Notification center -->
+  <div id="notifs-ov" class="overlay hidden">
+    <div class="ov-bg"></div>
+    <div class="ov-panel ov-sm">
+      <div class="ov-top">
+        <span class="ov-title">△ NOTIFICATION CENTER &middot; <b id="notifs-total">0</b></span>
+        <div class="notifs-top-actions">
+        <button id="btn-notifs-read" class="ibtn" title="Mark all as read">&#x2713;</button>
+        <button id="btn-clear-notifs" class="ibtn" title="Clear all">
+        <span class="spin">↺</span>
+        </button>
+        <button id="btn-close-notifs" class="ibtn" title="Close">&#x2715;</button>
+        </div>
+      </div>
+      <div id="notifs-filters" class="notifs-filters">
+        <button class="nfop act" data-nf="all">All</button>
+        <button class="nfop" data-nf="unread">Unread</button>
+      </div>
+      <div id="notifs-list" class="notifs-list"></div>
+    </div>
+  </div>
+
+  <!-- Pinned messages panel -->
+  <div id="pins-ov" class="overlay hidden">
+    <div class="ov-bg"></div>
+    <div class="ov-panel ov-sm">
+      <div class="ov-top">
+        <span class="ov-title">&#x25C8; PINNED &middot; <b id="pins-channel-lbl">default</b></span>
+        <button id="btn-close-pins" class="ibtn">&#x2715;</button>
+      </div>
+      <div id="pins-list" class="pins-list"></div>
+    </div>
+  </div>
+
+  <!-- Mention autocomplete dropdown (anchored to compose input in JS) -->
+  <div id="mention-dd" class="mention-dd hidden"></div>
+  <!-- Profile card — floating card shown when clicking a peer row. Populated
+       from live peers first, then contacts, then the persisted room roster. -->
+  <div id="prof-card-ov" class="overlay hidden">
+    <div class="ov-bg" data-act="close"></div>
+    <div class="ov-panel ov-sm p-card">
+      <div class="p-card-banner" id="p-card-banner">
+        <div class="p-card-mono" id="p-card-mono">?</div>
+        <span id="p-card-presence" class="p-card-presence p-off">OFFLINE</span>
+        <button class="ibtn p-card-x" data-act="close" title="Close">&#x2715;</button>
+      </div>
+      <div class="p-card-body">
+        <h2 id="p-card-nick">---</h2>
+        <div id="p-card-sub" class="p-card-sub">&mdash;</div>
+        <div class="p-card-meta">
+          <div class="p-card-meta-row">
+            <small>FINGERPRINT</small>
+            <button class="p-card-copy" data-act="copy-fp" title="Copy fingerprint">COPY</button>
+          </div>
+          <code id="p-card-fp">---- ---- ---- ----</code>
+        </div>
+        <div class="p-card-meta">
+          <small>SHARED ROOMS</small>
+          <div id="p-card-rooms" class="p-card-rooms"></div>
+        </div>
+        <div class="p-card-actions">
+          <button class="p-card-btn primary" data-act="dm">DM</button>
+          <button class="p-card-btn" data-act="contact">+ ADD</button>
+          <button class="p-card-btn" data-act="invite">INVITE</button>
+        </div>
+        <div class="p-card-danger">
+          <button class="p-card-btn danger" data-act="block">BLOCK</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- ONBOARDING MODAL — shown once after first room creation -->
+  <div id="onboard-ov" class="overlay hidden">
+    <div class="ov-bg"></div>
+    <div class="ov-panel ov-sm onboard-panel">
+      <div class="onboard-mark"><svg class="mark-token" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.6 3.4A8.6 8.6 0 0 0 10.6 20.6Z"/><path d="M13.4 3.4A8.6 8.6 0 0 1 13.4 20.6"/><path class="seam" d="M13.4 3.4V20.6"/></svg></div>
+      <div class="onboard-title">YOU'RE IN.</div>
+      <div class="onboard-sub">Share this code with anyone you want to connect with.<br>They paste it in the <span class="kw">ROOM</span> field to join you.</div>
+      <div class="onboard-code" id="onboard-code">SR-?????-?????-…</div>
+      <div class="onboard-actions">
+        <button id="btn-onboard-copy" class="j-btn primary"><span>COPY CODE</span><span class="arrow">&#x2192;</span></button>
+        <button id="btn-onboard-link" class="j-btn"><span>COPY INVITE LINK</span><span class="arrow">&#x2192;</span></button>
+      </div>
+      <div class="onboard-hint" id="onboard-hint"></div>
+      <div class="onboard-qr-wrap">
+        <img id="onboard-qr" class="onboard-qr hidden" alt="QR code for room invite">
+        <div class="onboard-qr-label">Scan to join on another device</div>
+      </div>
+      <button id="btn-onboard-close" class="onboard-dismiss">GOT IT &#x2713;</button>
+    </div>
+  </div>
+
+  <!-- Mobile bridge: builds window.sirr over nodejs-mobile-cordova
+       when running inside Capacitor. No-op on Electron desktop where
+       preload.js owns window.sirr. Must load BEFORE app.js so the
+       boot block's first window.sirr.* call resolves. Plain script
+       (not type=module) so it executes synchronously. -->
+  <script src="./modules/mobile-bridge.js"></script>
+  <script src="vendor/hairline-kernel.js"></script>
+  <script src="vendor/hairline-host.js"></script>
+  <script src="figures/token.js"></script>
+  <script src="figures/faders.js"></script>
+  <script src="figures/mesh.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

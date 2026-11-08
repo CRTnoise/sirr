@@ -1,0 +1,135 @@
+{
+  "name": "sirr",
+  "version": "1.1.0",
+  "private": true,
+  "description": "Serverless, end-to-end encrypted rooms for text, voice and files, carried directly between peers.",
+  "author": {
+    "name": "CRTnoise",
+    "email": "crtnoise@users.noreply.github.com"
+  },
+  "license": "AGPL-3.0-or-later",
+  "main": "main.js",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win nsis portable",
+    "postinstall": "electron-builder install-app-deps",
+    "build:win": "electron-builder --win nsis portable --publish never",
+    "build:mac": "electron-builder --mac dmg --publish never",
+    "build:linux": "electron-builder --linux AppImage deb --publish never",
+    "build:all": "electron-builder -mwl",
+    "build:worklet": "node scripts/build-worklet.js",
+    "test:mesh": "node test/mesh.mjs",
+    "test:notifs": "node test/notifs.mjs",
+    "test": "node test/mesh.mjs && node test/network.cjs && node test/transfers.cjs && node test/privacy.cjs && node test/atrest.cjs && node test/storeparity.cjs && node test/hardening.cjs && node test/applock.cjs && node test/nearby.cjs",
+    "test:network": "node test/network.cjs",
+    "test:transfers": "node test/transfers.cjs",
+    "test:privacy": "node test/privacy.cjs",
+    "test:all": "npm test && node test/notifs.mjs && node test/pathways.cjs && node test/echoes.cjs",
+    "test:atrest": "node test/atrest.cjs",
+    "preview": "node dev/preview.mjs",
+    "test:pathways": "node test/pathways.cjs",
+    "test:nearby": "node test/nearby.cjs",
+    "test:echoes": "node test/echoes.cjs"
+  },
+  "dependencies": {
+    "@hyperswarm/dht-relay": "0.4.3",
+    "b4a": "1.8.0",
+    "better-sqlite3": "13.0.3",
+    "hyperswarm": "4.17.2",
+    "qrcode": "1.5.4",
+    "tweetnacl": "1.0.3",
+    "tweetnacl-util": "0.15.1",
+    "ws": "8.22.1"
+  },
+  "devDependencies": {
+    "electron": "44.10.2",
+    "electron-builder": "26.18.0",
+    "jsdom": "24.1.3"
+  },
+  "build": {
+    "appId": "org.sirr.desktop",
+    "productName": "Sirr",
+    "icon": "assets/icon.png",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "preload-lock.js",
+      "picker-preload.js",
+      "picker.html",
+      "picker.js",
+      "lib/**/*",
+      "renderer/**/*",
+      "package.json",
+      "assets/**/*",
+      "LICENSE",
+      "THIRD-PARTY-NOTICES.md"
+    ],
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.social-networking",
+      "icon": "assets/icon.png"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Network",
+      "icon": "assets/icon.png",
+      "maintainer": "CRTnoise <crtnoise@users.noreply.github.com>",
+      "synopsis": "Serverless, end-to-end encrypted rooms",
+      "artifactName": "Sirr-${version}-${arch}.${ext}",
+      "syncDesktopName": true
+    },
+    "protocols": [
+      {
+        "name": "Sirr invite",
+        "schemes": [
+          "sirr"
+        ]
+      }
+    ],
+    "electronFuses": {
+      "runAsNode": false,
+      "enableCookieEncryption": true,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "artifactName": "Sirr-Setup-${version}.${ext}",
+      "license": "LICENSE"
+    },
+    "portable": {
+      "artifactName": "Sirr-${version}-portable.${ext}"
+    },
+    "publish": null
+  },
+  "bin": {
+    "sirr-bridge": "bin/sirr-bridge.js"
+  },
+  "homepage": "https://github.com/CRTnoise/sirr",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CRTnoise/sirr.git"
+  },
+  "desktopName": "sirr.desktop"
+}

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><title>Sirr — locked</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'">
+  <link rel="stylesheet" href="../assets/fonts/geist.css">
+  <link rel="stylesheet" href="lock.css">
+</head>
+<body>
+  <main class="lk">
+    <svg class="lk-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.6 3.4A8.6 8.6 0 0 0 10.6 20.6Z"/><path d="M13.4 3.4A8.6 8.6 0 0 1 13.4 20.6"/><path class="seam" d="M13.4 3.4V20.6"/></svg>
+    <div class="lk-name">SIRR</div>
+    <div class="lk-kick">// locked &mdash; nothing is readable until you type the passphrase</div>
+    <form id="f" class="lk-form" autocomplete="off">
+      <label for="p">PASSPHRASE</label>
+      <input id="p" type="password" autofocus spellcheck="false" autocomplete="off">
+      <div id="msg" class="lk-msg" role="status" aria-live="polite"></div>
+      <div class="lk-row">
+        <button type="submit" id="go">UNLOCK</button>
+        <button type="button" id="quit" class="ghost">QUIT</button>
+      </div>
+    </form>
+    <div class="lk-foot">The keys stay sealed on disk. Forgetting the passphrase means starting over &mdash; there is no reset.</div>
+  </main>
+  <script src="lock.js"></script>
+</body>
+</html>

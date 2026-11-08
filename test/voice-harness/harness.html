@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>harness</title></head>
+<body>
+<div id="voice-audio-pool"></div>
+<div id="voice-users"></div>
+<div id="call-grid"></div>
+<div id="messages"></div>
+<script type="module">
+const qs = new URLSearchParams(location.search);
+const V = qs.get('v') || '.';   // path (from the server root) to a Sirr checkout
+const ME = qs.get('id');
+const MESH = qs.get('mesh') || 'off';
+const FAILENC = qs.get('failenc') === '1';
+const NOMIC = qs.get('nomic') === '1';
+const GATE = qs.get('gate') || 'off';
+const DENOISE = qs.get('denoise') || 'off';
+const DROP = parseFloat(qs.get('drop') || '0');   // mesh datagram loss for this receiver
+const ROUTE = qs.get('route') || 'auto';
+const BLOCKRTC = qs.get('blockrtc') === '1';        // simulate ICE that can never connect
+window.__log = [];
+const origLog = console.log, origWarn = console.warn;
+console.log = (...a) => { window.__log.push(a.map(String).join(' ')); };
+console.warn = (...a) => { window.__log.push('W ' + a.map(String).join(' ')); };
+
+if (FAILENC) {
+  // Simulate a build/device where Opus encode can't be configured.
+  AudioEncoder.isConfigSupported = async () => ({ supported: false });
+}
+if (qs.get('noaec') === '1') {
+  // Both tabs' fake mics beep in sync; with AEC on, a peer cancels its own
+  // beep as "echo" of the identical beep it is playing. Real mics don't do that.
+  const gum = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+  navigator.mediaDevices.getUserMedia = (c) => { if (c && c.audio && typeof c.audio === 'object') c = { ...c, audio: { ...c.audio, echoCancellation: false, noiseSuppression: false, autoGainControl: false } }; return gum(c); };
+}
+if (FAILENC) {
+  // isConfigSupported is no longer asked — break the encoder for real.
+  const RealEnc = AudioEncoder;
+  window.AudioEncoder = class extends RealEnc { configure() { throw new Error('simulated: opus encoder unavailable'); } };
+  window.AudioEncoder.isConfigSupported = async () => ({ supported: false });
+}
+if (NOMIC) {
+  navigator.mediaDevices.getUserMedia = async (c) => { if (c && c.audio) { const e = new Error('no mic'); e.name = 'NotFoundError'; throw e; } };
+}
+
+const bc = new BroadcastChannel('sirr-sig');
+let voice;
+window.sirr = {
+  sendVoiceMedia: (pid, data, room) => {
+    bc.postMessage({ kind: 'media', from: ME, to: pid, data: new Uint8Array(data), room });
+  },
+  sendVoiceSignal: (pid, type, data, room, channel) => {
+    if (BLOCKRTC && (type === 0x12)) return Promise.resolve({ ok: true });            // no ICE
+    if (BLOCKRTC && (type === 0x10 || type === 0x11)) {                               // no candidates in SDP
+      try { const d = JSON.parse(data); d.sdp = d.sdp.split('\r\n').filter(l => !l.startsWith('a=candidate')).join('\r\n'); data = JSON.stringify(d); } catch (e) {}
+    }
+    bc.postMessage({ from: ME, to: pid || null, type, data, room, channel });
+    return Promise.resolve({ ok: true });
+  },
+  getAudioAssets: async () => {
+    const [mp, wl] = await Promise.all([
+      fetch('/' + V + '/renderer/worklets/mesh-playback.js').then(r => r.text()),
+      fetch('/' + V + '/renderer/worklets/rnnoise-worklet.js').then(r => r.text()),
+    ]);
+    const wasm = new Uint8Array(await fetch('/' + V + '/assets/wasm/rnnoise.wasm').then(r => r.arrayBuffer()));
+    return { meshPlayback: mp, worklet: wl, wasm };
+  },
+  updateConfig: async () => ({}),
+};
+
+const state = await import('/' + V + '/renderer/modules/state.js');
+voice = await import('/' + V + '/renderer/modules/voice.js');
+const mesh = await import('/' + V + '/renderer/modules/mesh-voice.js');
+window.__mesh = mesh;
+window.__voice = voice;
+window.__state = state;
+
+state.state.myPeerId = ME;
+state.state.myNickname = ME;
+state.state.activeRoom = 'R';
+state.state.meshVoice = MESH;
+state.state.noiseGate = GATE;
+state.state.denoise = DENOISE;
+state.state.voiceRoute = ROUTE;
+if (qs.get('red') === 'off') state.state.audioRedundancy = 'off';
+state.state.notifSound = 'off';
+state.roomData.set('R', { name: 'R', channels: new Map([['vc', { id: 'vc', kind: 'voice', name: 'Voice' }]]) });
+
+const LAT = parseFloat(qs.get('lat') || '0'), JIT = parseFloat(qs.get('jit') || '0');
+const lastAt = new Map();
+bc.onmessage = (ev) => {
+  const m = ev.data;
+  if (m.from === ME) return;
+  if (m.to && m.to !== ME) return;
+  if (LAT > 0) {
+    // ordered per sender (Hyperswarm streams are ordered), latency + jitter
+    const now = performance.now();
+    const at = Math.max(lastAt.get(m.from) || 0, now + LAT + Math.random() * JIT);
+    lastAt.set(m.from, at);
+    setTimeout(() => deliver(m), at - now);
+    return;
+  }
+  deliver(m);
+};
+function deliver(m) {
+  if (!state.peers.has(m.from)) state.peers.set(m.from, { peerId: m.from, nickname: m.from, rooms: ['R'] });
+  if (m.kind === 'media') {
+    if (DROP > 0 && m.data[0] === 0xB1 && Math.random() < DROP) return;
+    voice.handleVoiceMedia({ peerId: m.from, data: m.data });
+    return;
+  }
+  if (BLOCKRTC && m.type === 0x12) return;
+  voice.handleVoiceSignal({ peerId: m.from, type: m.type, room: m.room, channel: m.channel, data: m.data });
+}
+
+// Optional: simulate datagram loss on the mesh receive path
+if (DROP > 0) {
+  const origAdd = EventTarget.prototype.addEventListener;
+  const desc = Object.getOwnPropertyDescriptor(RTCDataChannel.prototype, 'onmessage');
+  Object.defineProperty(RTCDataChannel.prototype, 'onmessage', {
+    set(fn) { desc.set.call(this, (ev) => { const d = ev.data; if (d instanceof ArrayBuffer && new Uint8Array(d)[0] === 0xB1 && Math.random() < DROP) return; fn(ev); }); },
+    get() { return desc.get.call(this); },
+  });
+}
+
+window.join = () => voice.joinVoiceChannel('vc');
+window.leave = () => voice.leaveVoice();
+
+// Measure what I actually HEAR from each peer over a window.
+window.measure = async (ms = 2000) => {
+  const conns = state.voiceConns;
+  const before = new Map();
+  const ids = () => new Set([...conns.keys(), ...(mesh.swarmPeers ? mesh.swarmPeers() : [])]);
+  const snap = async () => {
+    const out = new Map();
+    for (const pid of ids()) { const c = conns.get(pid);
+      let energy = 0, bytes = 0;
+      if (c) try {
+        const rep = await c.pc.getStats();
+        rep.forEach(r => { if (r.type === 'inbound-rtp' && r.kind === 'audio') { energy += r.totalAudioEnergy || 0; bytes += r.bytesReceived || 0; } });
+      } catch (e) {}
+      const ms = mesh.statsFor ? mesh.statsFor(pid) : null;
+      const mp = (mesh.debugPlayed ? mesh.debugPlayed(pid) : null);
+      out.set(pid, { energy, bytes, meshRx: ms ? ms.rxPackets : 0, played: mp });
+    }
+    return out;
+  };
+  const a = await snap();
+  await new Promise(r => setTimeout(r, ms));
+  const b = await snap();
+  const res = {};
+  for (const pid of ids()) { const c = conns.get(pid);
+    const x = a.get(pid) || {}, y = b.get(pid) || {};
+    const el = c ? c.audioEl : null;
+    const rtcAudible = (y.energy - (x.energy || 0)) > 1e-5 && el && !el.muted;
+    const meshOn = mesh.isMeshActive ? mesh.isMeshActive(pid) : false;
+    const meshFlow = (y.meshRx - (x.meshRx || 0)) > 10;
+    const meshPlayed = (y.played != null && x.played != null) ? (y.played - x.played) : null;
+    let sendTrack = null;
+    const audioSender = c ? c.pc.getSenders().find(s => s.track ? s.track.kind === 'audio' : false) : null;
+    res[pid] = {
+      pc: c ? c.pc.connectionState : 'none', ss: c ? c.pc.signalingState : '-',
+      link: mesh.rxLinkFor ? mesh.rxLinkFor(pid) : null,
+      rtcEnergyDelta: +(y.energy - (x.energy || 0)).toFixed(6),
+      elMuted: el ? el.muted : null,
+      rtcAudible, meshOn, meshFlow, meshPlayed,
+      webrtcSending: !!audioSender,
+      hears: !!(rtcAudible || (meshOn && meshFlow && (meshPlayed == null || meshPlayed > 20000))),
+    };
+  }
+  return res;
+};
+window.ready = true;
+</script>
+</body></html>

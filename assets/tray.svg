@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Tray glyph: the token's two halves, filled, with a dark keyline so it
+       reads on light and dark taskbars alike. Drawn on a 32 grid. -->
+  <g stroke="#0b0d10" stroke-width="1.5" stroke-linejoin="round">
+    <path d="M14.5 3.5A12.5 12.5 0 0 0 14.5 28.5Z" fill="#e8eaee"/>
+    <path d="M17.5 3.5A12.5 12.5 0 0 1 17.5 28.5Z" fill="#4ff0a0"/>
+  </g>
+</svg>

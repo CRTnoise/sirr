@@ -1,0 +1,35 @@
+:root {
+  --bg: oklch(0.130 0.006 255); --brd: oklch(0.265 0.008 255); --brd-hi: oklch(0.340 0.009 255);
+  --dim: oklch(0.580 0.011 255); --txt: oklch(0.760 0.008 255); --hi: oklch(0.900 0.004 255);
+  --accent: oklch(0.82 0.14 158); --danger: oklch(0.70 0.15 25);
+  --mono: 'Geist Mono', ui-monospace, Menlo, Consolas, monospace;
+  --sans: 'Geist', ui-sans-serif, system-ui, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--txt); font: 13px/1.5 var(--sans); }
+.lk { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 28px; gap: 6px; }
+.lk-mark { width: 44px; height: 44px; fill: none; stroke: var(--accent); stroke-width: 1.2; }
+.lk-mark .seam { stroke-dasharray: 1.5 1.5; }
+.busy .lk-mark .seam { animation: seam 0.9s linear infinite; }
+@keyframes seam { to { stroke-dashoffset: -6; } }
+.lk-name { font: 600 15px var(--mono); letter-spacing: 0.32em; color: var(--hi); margin-top: 6px; }
+.lk-kick { font: 11px var(--mono); color: var(--dim); text-align: center; max-width: 300px; }
+.lk-form { width: 100%; max-width: 300px; display: flex; flex-direction: column; gap: 6px; margin-top: 22px; }
+.lk-form label { font: 10px var(--mono); letter-spacing: 0.14em; color: var(--dim); }
+.lk-form input {
+  font: 13px var(--mono); color: var(--hi); background: oklch(0.105 0.005 255);
+  border: 1px solid var(--brd); padding: 8px 10px; outline: none;
+}
+.lk-form input:focus { border-color: var(--accent); }
+.lk-msg { min-height: 18px; font: 11px var(--mono); color: var(--danger); }
+.lk-row { display: flex; gap: 6px; }
+button {
+  font: 11px var(--mono); letter-spacing: 0.1em; padding: 7px 14px; cursor: pointer;
+  background: none; color: var(--accent); border: 1px solid var(--accent);
+}
+button.ghost { color: var(--dim); border-color: var(--brd); }
+button:disabled { opacity: 0.45; cursor: default; }
+.lk-foot { position: absolute; bottom: 16px; left: 24px; right: 24px; text-align: center; font: 10px var(--mono); color: var(--dim); }
+@media (prefers-reduced-motion: reduce) { .busy .lk-mark .seam { animation: none; } }
+::selection { background: color-mix(in oklch, var(--accent) 35%, transparent); color: var(--hi); }

@@ -1,0 +1,29 @@
+name: CI
+
+# Tests on every push and pull request. Releases: see release.yml.
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      # --ignore-scripts skips electron-builder's install-app-deps, which
+      # would rebuild better-sqlite3 for Electron's ABI; tests run on Node.
+      - name: Install (Node ABI)
+        run: |
+          npm ci --ignore-scripts
+          npm rebuild better-sqlite3
+      - name: Test
+        run: npm run test:all

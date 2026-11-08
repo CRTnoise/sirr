@@ -1,0 +1,18 @@
+/* Geist + Geist Mono (SIL OFL 1.1, Vercel). Variable fonts, bundled locally
+   because the renderer CSP only allows font-src 'self'. */
+@font-face {
+  font-family: 'Geist';
+  src: url('geist/Geist-Variable.woff2') format('woff2-variations'),
+       url('geist/Geist-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('geist/GeistMono-Variable.woff2') format('woff2-variations'),
+       url('geist/GeistMono-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
