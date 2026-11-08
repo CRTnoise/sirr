@@ -1,20 +1,17 @@
 <p align="center"><img src="docs/media/hero.png" alt="Sirr: a token broken in two. A secret kept between two people, sealed on one device and opened only on the other"></p>
 
-<p align="center">
-  <a href="https://github.com/CRTnoise/sirr/releases/latest"><img src="https://img.shields.io/github/v/release/CRTnoise/sirr?style=flat-square&label=latest&labelColor=0b0d10&color=2fbf7a" alt="Latest release"></a>
-  <a href="https://github.com/CRTnoise/sirr/releases"><img src="https://img.shields.io/github/downloads/CRTnoise/sirr/total?style=flat-square&label=total%20downloads&labelColor=0b0d10&color=2fbf7a" alt="Total downloads"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-3a3f48?style=flat-square&labelColor=0b0d10" alt="AGPL-3.0"></a>
-</p>
+<p align="center"><a href="https://github.com/CRTnoise/sirr/releases/latest"><img src="https://raw.githubusercontent.com/CRTnoise/sirr/stats/summary.svg?sanitize=true" alt="Latest version and total downloads"></a></p>
 
-<!-- Download links name this release's files: on a new release, replace 1.2.0 below with the new version. -->
+<!-- Download links name this release's files: on a new release, replace 1.2.0 below with the new version.
+     The counters come from the "Download stats" workflow (stats branch), refreshed every 3 hours. -->
 <table align="center">
 <tr>
-<td align="center"><a href="https://github.com/CRTnoise/sirr/releases/latest/download/Sirr-Setup-1.2.0.exe"><img src="docs/media/dl-win-setup.png" width="250" alt="Download Sirr for Windows (installer)"></a><br><img src="https://img.shields.io/github/downloads/CRTnoise/sirr/latest/Sirr-Setup-1.2.0.exe?style=flat-square&label=downloads&labelColor=0b0d10&color=2fbf7a" alt="Downloads of Sirr-Setup-1.2.0.exe"></td>
-<td align="center"><a href="https://github.com/CRTnoise/sirr/releases/latest/download/Sirr-1.2.0-portable.exe"><img src="docs/media/dl-win-portable.png" width="250" alt="Download Sirr for Windows (portable)"></a><br><img src="https://img.shields.io/github/downloads/CRTnoise/sirr/latest/Sirr-1.2.0-portable.exe?style=flat-square&label=downloads&labelColor=0b0d10&color=2fbf7a" alt="Downloads of Sirr-1.2.0-portable.exe"></td>
+<td align="center"><a href="https://github.com/CRTnoise/sirr/releases/latest/download/Sirr-Setup-1.2.0.exe"><img src="docs/media/dl-win-setup.png" width="250" alt="Download Sirr for Windows (installer)"></a><br><img src="https://raw.githubusercontent.com/CRTnoise/sirr/stats/win-setup.svg?sanitize=true" alt="Windows installer downloads"></td>
+<td align="center"><a href="https://github.com/CRTnoise/sirr/releases/latest/download/Sirr-1.2.0-portable.exe"><img src="docs/media/dl-win-portable.png" width="250" alt="Download Sirr for Windows (portable)"></a><br><img src="https://raw.githubusercontent.com/CRTnoise/sirr/stats/win-portable.svg?sanitize=true" alt="Windows portable downloads"></td>
 </tr>
 <tr>
-<td align="center"><a href="https://github.com/CRTnoise/sirr/releases/latest/download/Sirr-1.2.0-x86_64.AppImage"><img src="docs/media/dl-linux-appimage.png" width="250" alt="Download Sirr for Linux (AppImage)"></a><br><img src="https://img.shields.io/github/downloads/CRTnoise/sirr/latest/Sirr-1.2.0-x86_64.AppImage?style=flat-square&label=downloads&labelColor=0b0d10&color=2fbf7a" alt="Downloads of Sirr-1.2.0-x86_64.AppImage"></td>
-<td align="center"><a href="https://github.com/CRTnoise/sirr/releases/latest/download/Sirr-1.2.0-amd64.deb"><img src="docs/media/dl-linux-deb.png" width="250" alt="Download Sirr for Debian and Ubuntu (.deb)"></a><br><img src="https://img.shields.io/github/downloads/CRTnoise/sirr/latest/Sirr-1.2.0-amd64.deb?style=flat-square&label=downloads&labelColor=0b0d10&color=2fbf7a" alt="Downloads of Sirr-1.2.0-amd64.deb"></td>
+<td align="center"><a href="https://github.com/CRTnoise/sirr/releases/latest/download/Sirr-1.2.0-x86_64.AppImage"><img src="docs/media/dl-linux-appimage.png" width="250" alt="Download Sirr for Linux (AppImage)"></a><br><img src="https://raw.githubusercontent.com/CRTnoise/sirr/stats/linux-appimage.svg?sanitize=true" alt="AppImage downloads"></td>
+<td align="center"><a href="https://github.com/CRTnoise/sirr/releases/latest/download/Sirr-1.2.0-amd64.deb"><img src="docs/media/dl-linux-deb.png" width="250" alt="Download Sirr for Debian and Ubuntu (.deb)"></a><br><img src="https://raw.githubusercontent.com/CRTnoise/sirr/stats/linux-deb.svg?sanitize=true" alt=".deb downloads"></td>
 </tr>
 </table>
 

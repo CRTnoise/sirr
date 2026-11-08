@@ -1,0 +1,47 @@
+name: Download stats
+
+# Counts downloads from the GitHub API and publishes small SVG counters on
+# the `stats` branch (one commit, replaced each run). The README shows them
+# from there — no third-party badge service involved.
+on:
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+  schedule:
+    - cron: '17 */3 * * *'
+  push:
+    branches: [main]
+    paths: ['scripts/download-stats.mjs', '.github/workflows/stats.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: download-stats
+  cancel-in-progress: true
+
+jobs:
+  stats:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: Count
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: node scripts/download-stats.mjs stats-out
+      - name: Publish to the stats branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          cd stats-out
+          git init -q -b stats
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -qm "Download stats"
+          git push -f -q "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" stats
