@@ -1,0 +1,11 @@
+{
+  "version": "v1.2.0",
+  "total": 41,
+  "counts": {
+    "win-setup": 8,
+    "win-portable": 11,
+    "linux-appimage": 19,
+    "linux-deb": 3
+  },
+  "updated": "2026-11-28T17:37:39.076Z"
+}
